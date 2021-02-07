@@ -1,0 +1,16 @@
+[package]
+name = "sony_headphones"
+version = "0.1.0"
+authors = ["Alexander Krigsman <alkrigsman@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+dbus = "0.9"
+futures = "0.3"
+libc = "0.2"
+macaddr = "1.0"
+nix = "0.19"
+num_enum = "0.5"
+thiserror = "1.0"
+tokio = { version = "1.2", features = ["macros", "rt-multi-thread", "net", "io-util"] }
