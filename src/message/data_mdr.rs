@@ -1,16 +1,18 @@
 pub mod nc_asm;
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use num_enum::{IntoPrimitive, FromPrimitive};
 
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.Command
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CommandType {
-    NcAsmGetParam = 102, // Noise Cancelling and/or Ambient Sound Mode
+    //NcAsmGetParam = 102, // Noise Cancelling and/or Ambient Sound Mode
     NcAsmSetParam = 104,
     NcAsmNtfyParam = 105,
+    #[num_enum(default)]
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -18,30 +20,7 @@ pub enum Command {
     //NcAsmGetParam(nc_asm::NcAsmGetParam),
     NcAsmSetParam(nc_asm::NcAsmSetParam),
     NcAsmNtfyParam(nc_asm::NcAsmNtfyParam),
-}
-
-impl Command {
-    fn command_type(&self) -> CommandType {
-        match self {
-            //Command::NcAsmGetParam(_) => CommandType::NcAsmGetParam,
-            Command::NcAsmSetParam(_) => CommandType::NcAsmSetParam,
-            Command::NcAsmNtfyParam(_) => CommandType::NcAsmNtfyParam,
-        }
-    }
-}
-
-impl Serializable for Command {
-    fn serialize(&self) -> Vec<u8> {
-        match self {
-            //Command::NcAsmGetParam(_) => CommandType::NcAsmGetParam,
-            Command::NcAsmSetParam(x) => x.serialize(),
-            Command::NcAsmNtfyParam(x) => x.serialize(),
-        }
-    }
-
-    fn deserialize(_bytes: &[u8]) -> Result<Self, DeserializeError> {
-        unimplemented!()
-    }
+    Unknown(Vec<u8>),
 }
 
 #[derive(Debug)]
@@ -51,12 +30,30 @@ pub struct DataMdr {
 
 impl Serializable for DataMdr {
     fn serialize(&self) -> Vec<u8> {
-        let mut ret = vec![self.command.command_type().into()];
-        ret.append(&mut self.command.serialize());
+        //TODO clean this up a bit to not repeat the match
+        let command_type = match self.command {
+            Command::NcAsmSetParam(_) => CommandType::NcAsmSetParam,
+            Command::NcAsmNtfyParam(_) => CommandType::NcAsmNtfyParam,
+            Command::Unknown(_) => CommandType::Unknown,
+        };
+        let mut bytes = match &self.command {
+            Command::NcAsmSetParam(x) => x.serialize(),
+            Command::NcAsmNtfyParam(x) => x.serialize(),
+            Command::Unknown(x) => x.clone(),
+        };
+
+        let mut ret = vec![command_type.into()];
+        ret.append(&mut bytes);
         ret
     }
 
-    fn deserialize(_bytes: &[u8]) -> Result<Self, DeserializeError> {
-        unimplemented!()
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
+        let command_type = bytes[0].into();
+        let command = match command_type {
+            CommandType::NcAsmSetParam => Command::NcAsmSetParam(nc_asm::NcAsmSetParam::deserialize(&bytes[1..])?),
+            CommandType::NcAsmNtfyParam => Command::NcAsmNtfyParam(nc_asm::NcAsmNtfyParam::deserialize(&bytes[1..])?),
+            CommandType::Unknown => Command::Unknown(bytes[1..].to_vec()),
+        };
+        Ok(Self { command })
     }
 }

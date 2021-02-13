@@ -1,18 +1,20 @@
 pub mod ack;
 pub mod data_mdr;
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use num_enum::{IntoPrimitive, FromPrimitive};
 
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.DataType
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, FromPrimitive, PartialEq, Eq)]
 #[repr(u8)]
 pub enum DataType {
     Ack = 1,
     DataMdr = 12,
+    #[num_enum(default)]
+    Unknown,
 }
 
 impl DataType {
@@ -28,6 +30,7 @@ impl DataType {
 pub enum Data {
     Ack(ack::Ack),
     DataMdr(data_mdr::DataMdr),
+    Unknown(Vec<u8>),
 }
 
 impl Data {
@@ -35,20 +38,8 @@ impl Data {
         match self {
             Data::Ack(_) => DataType::Ack,
             Data::DataMdr(_) => DataType::DataMdr,
+            Data::Unknown(_) => DataType::Unknown,
         }
-    }
-}
-
-impl Serializable for Data {
-    fn serialize(&self) -> Vec<u8> {
-        match self {
-            Data::Ack(x) => x.serialize(),
-            Data::DataMdr(x) => x.serialize(),
-        }
-    }
-
-    fn deserialize(_bytes: &[u8]) -> Result<Self, DeserializeError> {
-        unimplemented!()
     }
 }
 
@@ -77,7 +68,11 @@ pub struct Message {
 
 impl Serializable for Message {
     fn serialize(&self) -> Vec<u8> {
-        let mut data = self.data.serialize();
+        let mut data = match &self.data {
+            Data::Ack(x) => x.serialize(),
+            Data::DataMdr(x) => x.serialize(),
+            Data::Unknown(x) => x.clone(),
+        };
 
         //TODO escape specials
 
@@ -108,12 +103,13 @@ impl Serializable for Message {
             return Err(DeserializeError::InvalidStartOfMessage(bytes[0]));
         }
 
-        let data_type = DataType::try_from(bytes[1])?;
+        let data_type = DataType::from(bytes[1]);
         let sequence_number = bytes[2];
         let data_len = u32::from_be_bytes(bytes[3..7].try_into().unwrap()); //TODO
         let data = match data_type {
             DataType::Ack => Data::Ack(ack::Ack::deserialize(&bytes[7..(7+data_len as usize)])?),
             DataType::DataMdr => Data::DataMdr(data_mdr::DataMdr::deserialize(&bytes[7..(7+data_len as usize)])?),
+            DataType::Unknown => Data::Unknown(bytes[7..(7+data_len as usize)].to_vec()),
         };
         let chksum = bytes[(7+data_len as usize)];
 

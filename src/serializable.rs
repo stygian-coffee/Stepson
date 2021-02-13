@@ -13,13 +13,13 @@ pub enum DeserializeError {
     InvalidStartOfMessage(u8),
     #[error("invalid end of message: {0}")]
     InvalidEndOfMessage(u8),
-    #[error("discriminant {0} not found for enum {1}")]
-    TryFromPrimitive(u8, &'static str),
+    #[error("unrecognized value: {0}")]
+    TryFromPrimitive(u8),
 }
 
 impl<T: TryFromPrimitive<Primitive=u8>> From<TryFromPrimitiveError<T>> for DeserializeError {
     fn from(err: TryFromPrimitiveError<T>) -> Self {
-        DeserializeError::TryFromPrimitive(err.number, stringify!(T))
+        DeserializeError::TryFromPrimitive(err.number)
     }
 }
 

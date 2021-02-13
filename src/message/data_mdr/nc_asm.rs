@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::serializable::{DeserializeError, Serializable};
@@ -133,7 +135,15 @@ impl Serializable for NcAsmNtfyParam {
         unimplemented!()
     }
 
-    fn deserialize(_bytes: &[u8]) -> Result<Self, DeserializeError> {
-        unimplemented!()
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
+        Ok(Self {
+            nc_asm_inquired_type: bytes[0].try_into()?,
+            nc_asm_effect: bytes[1].try_into()?,
+            nc_asm_setting_type: bytes[2].try_into()?,
+            nc_dual_single_value: bytes[3].try_into()?,
+            asm_setting_type: bytes[4].try_into()?,
+            asm_id: bytes[5].try_into()?,
+            asm_level: bytes[6],
+        })
     }
 }
