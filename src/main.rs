@@ -1,14 +1,13 @@
 pub mod bluetooth;
 pub mod message;
+pub mod message_queue;
 pub mod serializable;
 
 use bluetooth::{AsyncBtStream, Manager};
 use message::*;
 use message::data_mdr;
 use message::data_mdr::nc_asm;
-use serializable::Serializable;
-
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, AsyncBufReadExt};
+use message_queue::MessageQueue;
 
 #[tokio::main]
 async fn main() {
@@ -16,9 +15,11 @@ async fn main() {
     let devices = manager.get_devices().unwrap();
     println!("{:#?}", devices);
 
-    let mut bt_stream = AsyncBtStream::new(devices[0].bt_stream().unwrap()).unwrap();
+    let bt_stream = AsyncBtStream::new(devices[0].bt_stream().unwrap()).unwrap();
 
     println!("Connected!");
+
+    let mut queue = MessageQueue::new(bt_stream);
 
     let msg = Message {
         sequence_number: 0,
@@ -35,15 +36,9 @@ async fn main() {
         }),
     };
 
-    println!("send: {:?}", msg);
-    bt_stream.write_all(&msg.serialize()).await.unwrap();
+    queue.send(msg).await;
 
-    let mut buf_reader = BufReader::new(bt_stream);
     loop {
-        //TODO the compiler does not optimize out initializing this memory...
-        // Maybe something to think about later?
-        let mut buf = [0; 2048];
-        buf_reader.read(&mut buf).await.unwrap();
-        println!("recv: {:?}", Message::deserialize(&mut buf).unwrap());
+        queue.recv().await;
     }
 }

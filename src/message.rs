@@ -17,15 +17,6 @@ pub enum DataType {
     Unknown,
 }
 
-impl DataType {
-    pub fn requires_ack(&self) -> bool {
-        match self {
-            DataType::DataMdr => true,
-            _ => false,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum Data {
     Ack(ack::Ack),
@@ -56,14 +47,23 @@ impl Data {
 //
 // escape / unescape specials is in com.sony.songpal.tandemfamily.message.a.b
 
-const MESSAGE_START: u8 = 62;
-const MESSAGE_END: u8 = 60;
+pub const MESSAGE_START: u8 = 62;
+pub const MESSAGE_END: u8 = 60;
 
 /// com.sony.songpal.tandemfamily.message.b
 #[derive(Debug)]
 pub struct Message {
     pub sequence_number: u8,
     pub data: Data,
+}
+
+impl Message {
+    pub fn requires_ack(&self) -> bool {
+        match self.data.data_type() {
+            DataType::DataMdr => true,
+            _ => false,
+        }
+    }
 }
 
 impl Serializable for Message {
