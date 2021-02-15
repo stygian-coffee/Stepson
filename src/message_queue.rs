@@ -38,18 +38,37 @@ impl MessageQueue {
     }
 
     pub async fn recv(&mut self) -> Option<Result<Message>> {
-        self.recv_loop_receiver.recv().await
+        recv_priv(&mut self.recv_loop_receiver).await
     }
 
     pub async fn send(&self, message: Message) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
-        let full = (message, tx);
-        self.send_loop_sender.send(full)?;
-        if let Err(e) = rx.await {
-            return Err(e.into());
-        }
-        Ok(())
+        send_priv(&self.send_loop_sender, message).await
     }
+
+    pub fn split(self) -> (RecvHalf, SendHalf) {
+        (
+            RecvHalf { recv_loop_receiver: self.recv_loop_receiver },
+            SendHalf { send_loop_sender: self.send_loop_sender }
+        )
+    }
+}
+
+async fn recv_priv(recv_loop_receiver: &mut mpsc::UnboundedReceiver<Result<Message>>)
+    -> Option<Result<Message>> {
+    recv_loop_receiver.recv().await
+}
+
+async fn send_priv(
+    send_loop_sender: &mpsc::UnboundedSender<MessageReturnError>,
+    message: Message,
+) -> Result<()> {
+    let (tx, rx) = oneshot::channel();
+    let full = (message, tx);
+    send_loop_sender.send(full)?;
+    if let Err(e) = rx.await {
+        return Err(e.into());
+    }
+    Ok(())
 }
 
 /// reads messages from `stream`, deserializes them, and sends them to `queue`
@@ -114,3 +133,29 @@ async fn send_loop_inner<T>(stream: &mut WriteHalf<T>, message: Message) -> Resu
     stream.write_all(&message.serialize()).await.map_err(|e| e.into())
 }
 
+pub struct RecvHalf {
+    recv_loop_receiver: mpsc::UnboundedReceiver<Result<Message>>,
+}
+
+impl RecvHalf {
+    pub async fn recv(&mut self) -> Option<Result<Message>> {
+        recv_priv(&mut self.recv_loop_receiver).await
+    }
+
+    pub fn unsplit(self, send_half: SendHalf) -> MessageQueue {
+        MessageQueue {
+            recv_loop_receiver: self.recv_loop_receiver,
+            send_loop_sender: send_half.send_loop_sender,
+        }
+    }
+}
+
+pub struct SendHalf {
+    send_loop_sender: mpsc::UnboundedSender<MessageReturnError>,
+}
+
+impl SendHalf {
+    pub async fn send(&mut self, message: Message) -> Result<()> {
+        send_priv(&self.send_loop_sender, message).await
+    }
+}

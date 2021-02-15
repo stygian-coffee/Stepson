@@ -19,7 +19,8 @@ async fn main() {
 
     println!("Connected!");
 
-    let mut queue = MessageQueue::new(bt_stream);
+    let queue = MessageQueue::new(bt_stream);
+    let (mut recv_queue, mut send_queue) = queue.split();
 
     let msg = Message {
         sequence_number: 0,
@@ -36,9 +37,9 @@ async fn main() {
         }),
     };
 
-    queue.send(msg).await.unwrap();
+    send_queue.send(msg).await.unwrap();
 
     loop {
-        queue.recv().await;
+        recv_queue.recv().await;
     }
 }
