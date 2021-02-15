@@ -36,7 +36,7 @@ async fn main() {
         }),
     };
 
-    queue.send(msg).await;
+    queue.send(msg).await.unwrap();
 
     loop {
         queue.recv().await;
