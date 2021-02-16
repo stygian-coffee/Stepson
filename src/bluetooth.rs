@@ -1,5 +1,6 @@
 pub mod bluez;
 
+use std::fmt;
 use std::io;
 use std::io::{Read, Write};
 use std::os::unix::io::{RawFd, AsRawFd};
@@ -54,20 +55,9 @@ impl Manager {
 }
 
 pub struct Device {
-    conn: Rc<Connection>,
-    path: String,
-    addr: String,
-    name: String,
-}
-
-impl std::fmt::Debug for Device {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Device")
-            .field("path", &self.path)
-            .field("addr", &self.addr)
-            .field("name", &self.name)
-            .finish()
-    }
+    pub path: String,
+    pub addr: String,
+    pub name: String,
 }
 
 impl Device {
@@ -82,11 +72,27 @@ impl Device {
         let name = prop_cast::<String>(&props, "Name").ok_or(
             anyhow!("Unable to get name for device {}", addr))?.clone();
 
-        Ok(Self { conn, path, addr, name })
+        Ok(Self { path, addr, name })
     }
 
     pub fn bt_stream(&self) -> Result<BtStream> {
         BtStream::connect(&self.addr)
+    }
+}
+
+impl fmt::Debug for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Device")
+            .field("path", &self.path)
+            .field("addr", &self.addr)
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
+impl fmt::Display for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Device {} {}", self.addr, self.name)
     }
 }
 

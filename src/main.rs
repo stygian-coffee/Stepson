@@ -1,6 +1,7 @@
 pub mod bluetooth;
 pub mod message;
 pub mod message_queue;
+pub mod repl;
 pub mod serializable;
 
 use bluetooth::{AsyncBtStream, Manager};
@@ -11,6 +12,9 @@ use message_queue::MessageQueue;
 
 #[tokio::main]
 async fn main() {
+    let mut repl = repl::Repl::new().unwrap();
+    repl.run().await.unwrap();
+
     let manager = Manager::new().unwrap();
     let devices = manager.get_devices().unwrap();
     println!("{:#?}", devices);

@@ -12,5 +12,6 @@ libc = "0.2"
 macaddr = "1.0"
 nix = "0.19"
 num_enum = "0.5"
+rustyline = "7"
 thiserror = "1.0"
 tokio = { version = "1.2", features = ["macros", "rt-multi-thread", "net", "io-util", "sync"] }
