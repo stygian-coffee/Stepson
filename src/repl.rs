@@ -74,7 +74,8 @@ impl Repl {
         Ok(false)
     }
 
-    async fn connect(&mut self, words: &mut dyn Iterator<Item=&str>) -> Result<ShouldExit> {
+    async fn connect<'a, T>(&mut self, words: &mut T) -> Result<ShouldExit> where
+        T: Iterator<Item=&'a str> {
         let addr = match words.next() {
             Some(w) => w.to_uppercase(),
             None => {
@@ -107,7 +108,8 @@ impl Repl {
         Ok(false)
     }
 
-    async fn devices(&self, words: &mut dyn Iterator<Item=&str>) -> Result<ShouldExit> {
+    async fn devices<'a, T>(&self, words: &mut T) -> Result<ShouldExit> where
+        T: Iterator<Item=&'a str> {
         if let Some(_) = words.next() {
             println!("devices: too many arguments, expected 0");
             return Ok(false);
@@ -122,7 +124,8 @@ impl Repl {
         Ok(false)
     }
 
-    async fn quit(&self, words: &mut dyn Iterator<Item=&str>) -> Result<ShouldExit> {
+    async fn quit<'a, T>(&mut self, words: &mut T) -> Result<ShouldExit> where
+        T: Iterator<Item=&'a str> {
         match words.next() {
             Some(_) => {
                 println!("quit: too many arguments, expected 0");
