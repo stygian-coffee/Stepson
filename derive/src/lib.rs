@@ -14,10 +14,6 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
         _ => panic!("{} must be an enum", enum_name),
     }.variants.into_iter();
 
-    // remove the variant "Unknown"
-    //TODO handle this better
-    let variants = variants.filter(|v| v.ident != "Unknown");
-
     // now, turn each variant into a match arm
     let arms = variants.map(|v| match_arm_from_variant(&enum_name, v));
 
@@ -48,6 +44,17 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 fn match_arm_from_variant(enum_name: &proc_macro2::Ident, variant: Variant)
     -> proc_macro2::TokenStream {
     let variant_name = variant.ident;
+
+    //TODO find some way to not force the existence of a variant named "Unknown"
+    if variant_name == "Unknown" {
+        return quote! {
+            _ => {
+                let mut v = vec![<u8 as std::str::FromStr>::from_str(word)?];
+                v.append(&mut Vec::<u8>::from_repl(words)?);
+                #enum_name::#variant_name(v)
+            },
+        }
+    }
 
     // if discriminant, than no variant
     if let Some(_) = variant.discriminant {

@@ -32,3 +32,10 @@ impl FromRepl for u8 {
         Ok(u8::from_str(word)?)
     }
 }
+
+impl FromRepl for Vec<u8> {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
+        T: Iterator<Item=&'a str> {
+        Ok(words.map(|w| u8::from_str(w)).collect::<Result<Vec<u8>, _>>()?)
+    }
+}
