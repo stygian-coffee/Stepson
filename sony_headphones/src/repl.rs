@@ -1,8 +1,13 @@
+pub mod from_repl;
+
+pub use from_repl::*;
+
 use anyhow::Result;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
 use crate::bluetooth::{AsyncBtStream, Device, Manager};
+use crate::message::Message;
 use crate::message_queue::MessageQueue;
 
 type ShouldExit = bool;
@@ -10,7 +15,7 @@ type ShouldExit = bool;
 pub struct Repl {
     manager: Manager,
     device: Option<Device>,
-    bt_stream: Option<AsyncBtStream>,
+    message_queue: Option<MessageQueue>,
 }
 
 impl Repl {
@@ -18,7 +23,7 @@ impl Repl {
         Ok(Self { 
             manager: Manager::new()?,
             device: None,
-            bt_stream: None,
+            message_queue: None,
         })
     }
 
@@ -57,6 +62,7 @@ impl Repl {
             None => Ok(false),
             Some("connect") => self.connect(&mut words).await,
             Some("devices") => self.devices(&mut words).await,
+            Some("send") => self.send(&mut words).await,
             Some("quit") => self.quit(&mut words).await,
             Some(w) => self.unknown_command(w),
         };
@@ -99,11 +105,12 @@ impl Repl {
         };
 
         let bt_stream = AsyncBtStream::new(device.bt_stream()?)?;
+        let message_queue = MessageQueue::new(bt_stream);
 
         println!("connect: connected to {}", device.name);
 
         self.device = Some(device);
-        self.bt_stream = Some(bt_stream);
+        self.message_queue = Some(message_queue);
 
         Ok(false)
     }
@@ -119,6 +126,31 @@ impl Repl {
 
         for dev in devices {
             println!("{}", dev);
+        }
+
+        Ok(false)
+    }
+
+    async fn send<'a, T>(&self, words: &mut T) -> Result<ShouldExit> where
+        T: Iterator<Item=&'a str> {
+        let message_queue = match &self.message_queue {
+            Some(s) => s,
+            None => {
+                println!("send: not connected to a device");
+                return Ok(false);
+            },
+        };
+
+        let message = match Message::from_repl(words) {
+            Ok(m) => m,
+            Err(e) => {
+                println!("send: {}", e);
+                return Ok(false);
+            }
+        };
+
+        if let Err(e) = message_queue.send(message).await {
+            println!("send: unable to send message: {}", e);
         }
 
         Ok(false)

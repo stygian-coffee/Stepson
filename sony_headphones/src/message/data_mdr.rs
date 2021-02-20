@@ -2,6 +2,7 @@ pub mod nc_asm;
 
 use num_enum::{IntoPrimitive, FromPrimitive};
 
+use crate::repl::{FromRepl, ParseError};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.Command
@@ -15,7 +16,7 @@ pub enum CommandType {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRepl)]
 pub enum Command {
     //NcAsmGetParam(nc_asm::NcAsmGetParam),
     NcAsmSetParam(nc_asm::NcAsmSetParam),
@@ -26,6 +27,13 @@ pub enum Command {
 #[derive(Debug)]
 pub struct DataMdr {
     pub command: Command
+}
+
+impl FromRepl for DataMdr {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
+        T: Iterator<Item=&'a str> {
+        Ok(Self { command: Command::from_repl(words)? })
+    }
 }
 
 impl Serializable for DataMdr {

@@ -1,7 +1,15 @@
 use crate::serializable::{DeserializeError, Serializable};
+use crate::repl::{FromRepl, ParseError};
 
 #[derive(Debug)]
 pub struct Ack {}
+
+impl FromRepl for Ack {
+    fn from_repl<'a, T>(_words: &mut T) -> Result<Self, ParseError> where
+        T: Iterator<Item=&'a str> {
+        Ok(Self {})
+    }
+}
 
 impl Serializable for Ack {
     fn serialize(&self) -> Vec<u8> {

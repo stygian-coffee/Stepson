@@ -23,6 +23,7 @@ impl<T: TryFromPrimitive<Primitive=u8>> From<TryFromPrimitiveError<T>> for Deser
     }
 }
 
+//TODO derive macro for simple structs
 pub trait Serializable {
     fn serialize(&self) -> Vec<u8>;
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> where Self: Sized;

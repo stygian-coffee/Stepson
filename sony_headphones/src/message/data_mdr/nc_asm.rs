@@ -2,10 +2,11 @@ use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
+use crate::repl::{FromRepl, ParseError};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.AsmId
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum AsmId {
     Normal = 0,
@@ -13,7 +14,7 @@ pub enum AsmId {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.AsmOnOffValue
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum AsmOnOffValue {
     Off = 0,
@@ -21,7 +22,7 @@ pub enum AsmOnOffValue {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.AsmSettingType
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum AsmSettingType {
     OnOff = 0,
@@ -29,7 +30,7 @@ pub enum AsmSettingType {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.NcAsmEffect
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcAsmEffect {
     Off = 0,
@@ -39,7 +40,7 @@ pub enum NcAsmEffect {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.NcAsmInquiredType
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcAsmInquiredType {
     NoUse = 0,
@@ -49,7 +50,7 @@ pub enum NcAsmInquiredType {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.NcAsmSettingType
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcAsmSettingType {
     OnOff = 0,
@@ -58,7 +59,7 @@ pub enum NcAsmSettingType {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.NcDualSingleValue
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcDualSingleValue {
     Off = 0,
@@ -67,7 +68,7 @@ pub enum NcDualSingleValue {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.NcOnOffValue
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcOnOffValue {
     Off = 0,
@@ -75,7 +76,7 @@ pub enum NcOnOffValue {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.NcSettingType
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcSettingType {
     OnOff = 0,
@@ -83,7 +84,7 @@ pub enum NcSettingType {
 }
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.NcSettingValue
-#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, PartialEq, Eq, FromRepl)]
 #[repr(u8)]
 pub enum NcSettingValue {
     Off = 0,
@@ -99,6 +100,21 @@ pub struct NcAsmSetParam {
     pub asm_setting_type: AsmSettingType,
     pub asm_id: AsmId,
     pub asm_level: u8, //TODO understand level
+}
+
+impl FromRepl for NcAsmSetParam {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
+        T: Iterator<Item=&'a str> {
+        Ok(Self {
+            nc_asm_inquired_type: NcAsmInquiredType::from_repl(&mut words.take(1))?,
+            nc_asm_effect: NcAsmEffect::from_repl(&mut words.take(1))?,
+            nc_asm_setting_type: NcAsmSettingType::from_repl(&mut words.take(1))?,
+            nc_dual_single_value: NcDualSingleValue::from_repl(&mut words.take(1))?,
+            asm_setting_type: AsmSettingType::from_repl(&mut words.take(1))?,
+            asm_id: AsmId::from_repl(&mut words.take(1))?,
+            asm_level: u8::from_repl(&mut words.take(1))?, //TODO understand level
+        })
+    }
 }
 
 impl Serializable for NcAsmSetParam {
@@ -128,6 +144,21 @@ pub struct NcAsmNtfyParam {
     pub asm_setting_type: AsmSettingType,
     pub asm_id: AsmId,
     pub asm_level: u8, //TODO understand level
+}
+
+impl FromRepl for NcAsmNtfyParam {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
+        T: Iterator<Item=&'a str> {
+        Ok(Self {
+            nc_asm_inquired_type: NcAsmInquiredType::from_repl(&mut words.take(1))?,
+            nc_asm_effect: NcAsmEffect::from_repl(&mut words.take(1))?,
+            nc_asm_setting_type: NcAsmSettingType::from_repl(&mut words.take(1))?,
+            nc_dual_single_value: NcDualSingleValue::from_repl(&mut words.take(1))?,
+            asm_setting_type: AsmSettingType::from_repl(&mut words.take(1))?,
+            asm_id: AsmId::from_repl(&mut words.take(1))?,
+            asm_level: u8::from_repl(&mut words.take(1))?, //TODO understand level
+        })
+    }
 }
 
 impl Serializable for NcAsmNtfyParam {

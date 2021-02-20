@@ -5,6 +5,7 @@ use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, FromPrimitive};
 
+use crate::repl::{FromRepl, ParseError};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.DataType
@@ -17,7 +18,7 @@ pub enum DataType {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromRepl)]
 pub enum Data {
     Ack(ack::Ack),
     DataMdr(data_mdr::DataMdr),
@@ -63,6 +64,16 @@ impl Message {
             DataType::DataMdr => true,
             _ => false,
         }
+    }
+}
+
+impl FromRepl for Message {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
+        T: Iterator<Item=&'a str> {
+        Ok(Self {
+            sequence_number: 0,
+            data: Data::from_repl(words)?,
+        })
     }
 }
 
