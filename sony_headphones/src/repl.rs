@@ -1,8 +1,13 @@
+pub mod completion;
 pub mod from_repl;
 
+pub use completion::*;
 pub use from_repl::*;
 
+use std::collections::HashMap;
+
 use anyhow::Result;
+use rustyline::config::{CompletionType, Config};
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
@@ -18,6 +23,17 @@ pub struct Repl {
     message_queue: Option<MessageQueue>,
 }
 
+impl ReplCompletion for Repl {
+    fn possible_completions<'a>() -> CompletionMap<'a> {
+        let mut completions = HashMap::new();
+        completions.insert("connect", None);
+        completions.insert("devices", None);
+        completions.insert("send", None);
+        completions.insert("quit", None);
+        completions.into()
+    }
+}
+
 impl Repl {
     pub fn new() -> Result<Self> {
         Ok(Self { 
@@ -28,7 +44,11 @@ impl Repl {
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        let mut rl = Editor::<()>::new();
+        let config = Config::builder()
+            .completion_type(CompletionType::List)
+            .build();
+        let mut rl = Editor::<ReplHelper<'_>>::with_config(config);
+        rl.set_helper(Some(ReplHelper::new(Self::possible_completions())));
 
         loop {
             let readline = rl.readline(&self.prompt());
