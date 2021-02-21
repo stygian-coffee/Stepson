@@ -12,10 +12,13 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let variants = match input.data {
         Data::Enum(d) => d,
         _ => panic!("{} must be an enum", enum_name),
-    }.variants.into_iter();
+    }.variants;
 
-    // now, turn each variant into a match arm
-    let arms = variants.map(|v| match_arm_from_variant(&enum_name, v));
+    // now, turn each variant into a match arm for FromRepl
+    let arms_from_repl = variants.iter().map(|v| variant_to_from_repl(&enum_name, v));
+
+    // also, turn each variant into a match arm for ReplCompletion
+    let arms_complete = variants.iter().map(|v| variant_to_repl_completion(v));
 
     // finally, create the impl
     let expanded = quote! {
@@ -31,9 +34,17 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                 };
 
                 Ok(match word {
-                    #(#arms)*
+                    #(#arms_from_repl)*
                     _ => return Err(ParseError::UnknownArgument(word.to_string())),
                 })
+            }
+        }
+
+        impl crate::repl::ReplCompletion for #enum_name {
+            fn complete<'__a, __T>(words: __T, pos: usize) -> (usize, Vec<String>) where
+                __T: Iterator<Item=&'__a str> {
+                //TODO
+                unimplemented!()
             }
         }
     };
@@ -41,9 +52,9 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     proc_macro::TokenStream::from(expanded)
 }
 
-fn match_arm_from_variant(enum_name: &proc_macro2::Ident, variant: Variant)
+fn variant_to_from_repl(enum_name: &proc_macro2::Ident, variant: &Variant)
     -> proc_macro2::TokenStream {
-    let variant_name = variant.ident;
+    let variant_name = &variant.ident;
 
     //TODO find some way to not force the existence of a variant named "Unknown"
     if variant_name == "Unknown" {
@@ -64,7 +75,7 @@ fn match_arm_from_variant(enum_name: &proc_macro2::Ident, variant: Variant)
     }
 
     // otherwise, enum variant has one unnamed field; get it
-    let field = match variant.fields {
+    let field = match variant.fields.clone() {
         Fields::Unnamed(f) => f,
         _ => unreachable!(), //TODO is this really unreachable?
     }.unnamed.into_iter().nth(0).unwrap();
@@ -75,5 +86,38 @@ fn match_arm_from_variant(enum_name: &proc_macro2::Ident, variant: Variant)
 
     quote! {
         stringify!(#variant_name) => #enum_name::#variant_name(#field_type::from_repl(words)?),
+    }
+}
+
+fn variant_to_repl_completion(variant: &Variant) -> proc_macro2::TokenStream {
+    //TODO
+    let variant_name = &variant.ident;
+
+    //TODO find some way to not force the existence of a variant named "Unknown"
+    if variant_name == "Unknown" {
+        return proc_macro2::TokenStream::new();
+    }
+
+    // if discriminant, then no field
+    if let Some(_) = variant.discriminant {
+        return quote! {
+            completions.insert(stringify!(#variant_name), None);
+        }
+    }
+
+    // otherwise, enum variant has one unnamed field; get it
+    let field = match variant.fields.clone() {
+        Fields::Unnamed(f) => f,
+        _ => unreachable!(), //TODO is this really unreachable?
+    }.unnamed.into_iter().nth(0).unwrap();
+    //TODO helpful error message? check length of iter?
+
+    //TODO helpful error message if field.ident is None
+    let field_type = field.ty;
+
+    quote! {
+        completions.insert(stringify!(#variant_name), Some(
+            #field_type::possible_completions as
+            fn(__T) -> crate::repl::CompletionMap<'__a, __T>));
     }
 }

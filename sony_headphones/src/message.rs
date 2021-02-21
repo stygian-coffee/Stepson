@@ -5,7 +5,7 @@ use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, FromPrimitive};
 
-use crate::repl::{FromRepl, ParseError};
+use crate::repl::{FromRepl, ReplCompletion, ParseError};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.DataType
@@ -74,6 +74,13 @@ impl FromRepl for Message {
             sequence_number: 0,
             data: Data::from_repl(words)?,
         })
+    }
+}
+
+impl ReplCompletion for Message {
+    fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
+        T: Iterator<Item=&'a str> {
+        Data::complete(words, pos)
     }
 }
 

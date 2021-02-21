@@ -4,8 +4,6 @@ pub mod from_repl;
 pub use completion::*;
 pub use from_repl::*;
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use rustyline::config::{CompletionType, Config};
 use rustyline::error::ReadlineError;
@@ -24,13 +22,31 @@ pub struct Repl {
 }
 
 impl ReplCompletion for Repl {
-    fn possible_completions<'a>() -> CompletionMap<'a> {
-        let mut completions = HashMap::new();
-        completions.insert("connect", None);
-        completions.insert("devices", None);
-        completions.insert("send", None);
-        completions.insert("quit", None);
-        completions.into()
+    fn complete<'a, T>(mut words: T, pos: usize) -> (usize, Vec<String>) where
+        T: Iterator<Item=&'a str> {
+        let possible_first_words = vec!["connect", "devices", "send", "quit"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect();
+
+        let first_word = match words.next() {
+            Some(w) => w,
+            None => return (0, possible_first_words),
+        };
+
+        //TODO consider the case that there are two options, one being a substring of another,
+        // e.g. `send' and `sendll'
+        // Maybe make spaces relevant here, etc.
+        if possible_first_words.contains(&first_word.to_string()) {
+            match first_word {
+                "send" => Message::complete(words, pos),
+                _ => (pos, vec![]),
+            }
+        } else {
+            // TODO improve position, see completion.rs
+            (pos - first_word.len(), possible_first_words.into_iter()
+                .filter(|s| s.starts_with(first_word)).collect())
+        }
     }
 }
 
@@ -47,8 +63,8 @@ impl Repl {
         let config = Config::builder()
             .completion_type(CompletionType::List)
             .build();
-        let mut rl = Editor::<ReplHelper<'_>>::with_config(config);
-        rl.set_helper(Some(ReplHelper::new(Self::possible_completions())));
+        let mut rl = Editor::<ReplHelper>::with_config(config);
+        rl.set_helper(Some(ReplHelper));
 
         loop {
             let readline = rl.readline(&self.prompt());

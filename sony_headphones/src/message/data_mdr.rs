@@ -2,7 +2,7 @@ pub mod nc_asm;
 
 use num_enum::{IntoPrimitive, FromPrimitive};
 
-use crate::repl::{FromRepl, ParseError};
+use crate::repl::{FromRepl, ReplCompletion, ParseError};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.Command
@@ -33,6 +33,13 @@ impl FromRepl for DataMdr {
     fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
         T: Iterator<Item=&'a str> {
         Ok(Self { command: Command::from_repl(words)? })
+    }
+}
+
+impl ReplCompletion for DataMdr {
+    fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
+        T: Iterator<Item=&'a str> {
+        Command::complete(words, pos)
     }
 }
 

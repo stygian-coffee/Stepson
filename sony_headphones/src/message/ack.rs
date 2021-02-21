@@ -1,5 +1,5 @@
 use crate::serializable::{DeserializeError, Serializable};
-use crate::repl::{FromRepl, ParseError};
+use crate::repl::{FromRepl, ReplCompletion, ParseError};
 
 #[derive(Debug)]
 pub struct Ack {}
@@ -8,6 +8,13 @@ impl FromRepl for Ack {
     fn from_repl<'a, T>(_words: &mut T) -> Result<Self, ParseError> where
         T: Iterator<Item=&'a str> {
         Ok(Self {})
+    }
+}
+
+impl ReplCompletion for Ack {
+    fn complete<'a, T>(_words: T, pos: usize) -> (usize, Vec<String>) where
+        T: Iterator<Item=&'a str> {
+        (pos, vec![])
     }
 }
 

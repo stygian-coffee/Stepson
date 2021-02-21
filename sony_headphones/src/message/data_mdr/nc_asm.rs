@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::repl::{FromRepl, ParseError};
+use crate::repl::{FromRepl, ReplCompletion, ParseError};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.AsmId
@@ -117,6 +117,13 @@ impl FromRepl for NcAsmSetParam {
     }
 }
 
+impl ReplCompletion for NcAsmSetParam {
+    fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
+        T: Iterator<Item=&'a str> {
+        unimplemented!()
+    }
+}
+
 impl Serializable for NcAsmSetParam {
     fn serialize(&self) -> Vec<u8> {
         vec![
@@ -158,6 +165,13 @@ impl FromRepl for NcAsmNtfyParam {
             asm_id: AsmId::from_repl(&mut words.take(1))?,
             asm_level: u8::from_repl(&mut words.take(1))?, //TODO understand level
         })
+    }
+}
+
+impl ReplCompletion for NcAsmNtfyParam {
+    fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
+        T: Iterator<Item=&'a str> {
+        unimplemented!()
     }
 }
 
