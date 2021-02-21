@@ -15,13 +15,10 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     }.variants;
 
     // now, turn each variant into a match arm for FromRepl
-    let arms_from_repl = variants.iter().map(|v| variant_to_from_repl(&enum_name, v));
-
-    // also, turn each variant into a match arm for ReplCompletion
-    let arms_complete = variants.iter().map(|v| variant_to_repl_completion(v));
+    let arms = variants.iter().map(|v| variant_to_from_repl(&enum_name, v));
 
     // finally, create the impl
-    let expanded = quote! {
+    let from_repl_expanded = quote! {
         impl FromRepl for #enum_name {
             fn from_repl<'a, T>(words: &mut T)
                 -> Result<Self, crate::repl::from_repl::ParseError> where
@@ -34,22 +31,46 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
                 };
 
                 Ok(match word {
-                    #(#arms_from_repl)*
+                    #(#arms)*
                     _ => return Err(ParseError::UnknownArgument(word.to_string())),
                 })
             }
         }
+    };
 
+    let variant_names = variants.iter().map(|v| &v.ident).filter(|s| *s != "Unknown");
+
+    let arms = variants.iter().map(|v| variant_to_repl_completion(v));
+
+    let repl_completion_expanded = quote! {
         impl crate::repl::ReplCompletion for #enum_name {
-            fn complete<'__a, __T>(words: __T, pos: usize) -> (usize, Vec<String>) where
+            fn complete<'__a, __T>(mut words: __T, pos: usize) -> (usize, Vec<String>) where
                 __T: Iterator<Item=&'__a str> {
-                //TODO
-                unimplemented!()
+                let possible_first_words = vec![#(stringify!(#variant_names)),*]
+                    .into_iter().map(|s| s.to_string()).collect();
+
+                let first_word = match words.next() {
+                    Some(w) => w,
+                    None => return (0, possible_first_words),
+                };
+
+                //TODO consider the case that there are two options, one being a substring of another,
+                // Maybe make spaces relevant here, etc.
+                if possible_first_words.contains(&first_word.to_string()) {
+                    match first_word {
+                        #(#arms)*
+                        _ => (pos, vec![]),
+                    }
+                } else {
+                    // TODO improve position, see completion.rs
+                    (pos - first_word.len(), possible_first_words.into_iter()
+                        .filter(|s| s.starts_with(first_word)).collect())
+                }
             }
         }
     };
 
-    proc_macro::TokenStream::from(expanded)
+    proc_macro::TokenStream::from(quote! { #from_repl_expanded #repl_completion_expanded })
 }
 
 fn variant_to_from_repl(enum_name: &proc_macro2::Ident, variant: &Variant)
@@ -90,7 +111,6 @@ fn variant_to_from_repl(enum_name: &proc_macro2::Ident, variant: &Variant)
 }
 
 fn variant_to_repl_completion(variant: &Variant) -> proc_macro2::TokenStream {
-    //TODO
     let variant_name = &variant.ident;
 
     //TODO find some way to not force the existence of a variant named "Unknown"
@@ -100,9 +120,7 @@ fn variant_to_repl_completion(variant: &Variant) -> proc_macro2::TokenStream {
 
     // if discriminant, then no field
     if let Some(_) = variant.discriminant {
-        return quote! {
-            completions.insert(stringify!(#variant_name), None);
-        }
+        return proc_macro2::TokenStream::new();
     }
 
     // otherwise, enum variant has one unnamed field; get it
@@ -116,8 +134,6 @@ fn variant_to_repl_completion(variant: &Variant) -> proc_macro2::TokenStream {
     let field_type = field.ty;
 
     quote! {
-        completions.insert(stringify!(#variant_name), Some(
-            #field_type::possible_completions as
-            fn(__T) -> crate::repl::CompletionMap<'__a, __T>));
+        stringify!(#variant_name) => #field_type::complete(words, pos),
     }
 }
