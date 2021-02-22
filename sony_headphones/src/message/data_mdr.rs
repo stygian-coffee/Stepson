@@ -1,5 +1,7 @@
 pub mod nc_asm;
 
+use std::collections::HashMap;
+
 use num_enum::{IntoPrimitive, FromPrimitive};
 
 use crate::repl::{FromRepl, ReplCompletion, ParseError};
@@ -36,12 +38,12 @@ impl FromRepl for DataMdr {
     }
 }
 
-// impl ReplCompletion for DataMdr {
-//     fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
-//         T: Iterator<Item=&'a str> {
-//         Command::complete(words, pos)
-//     }
-// }
+impl ReplCompletion for DataMdr {
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        Command::completion_map()
+    }
+}
 
 impl Serializable for DataMdr {
     fn serialize(&self) -> Vec<u8> {

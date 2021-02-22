@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -117,12 +118,12 @@ impl FromRepl for NcAsmSetParam {
     }
 }
 
-// impl ReplCompletion for NcAsmSetParam {
-//     fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
-//         T: Iterator<Item=&'a str> {
-//         unimplemented!()
-//     }
-// }
+impl ReplCompletion for NcAsmSetParam {
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        unimplemented!()
+    }
+}
 
 impl Serializable for NcAsmSetParam {
     fn serialize(&self) -> Vec<u8> {
@@ -168,12 +169,12 @@ impl FromRepl for NcAsmNtfyParam {
     }
 }
 
-// impl ReplCompletion for NcAsmNtfyParam {
-//     fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
-//         T: Iterator<Item=&'a str> {
-//         unimplemented!()
-//     }
-// }
+impl ReplCompletion for NcAsmNtfyParam {
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        unimplemented!()
+    }
+}
 
 impl Serializable for NcAsmNtfyParam {
     fn serialize(&self) -> Vec<u8> {

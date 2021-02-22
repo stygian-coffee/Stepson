@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::serializable::{DeserializeError, Serializable};
 use crate::repl::{FromRepl, ReplCompletion, ParseError};
 
@@ -11,12 +13,12 @@ impl FromRepl for Ack {
     }
 }
 
-// impl ReplCompletion for Ack {
-//     fn complete<'a, T>(_words: T, pos: usize) -> (usize, Vec<String>) where
-//         T: Iterator<Item=&'a str> {
-//         (pos, vec![])
-//     }
-// }
+impl ReplCompletion for Ack {
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        HashMap::new()
+    }
+}
 
 impl Serializable for Ack {
     fn serialize(&self) -> Vec<u8> {
