@@ -4,6 +4,8 @@ pub mod from_repl;
 pub use completion::*;
 pub use from_repl::*;
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use rustyline::config::{CompletionType, Config};
 use rustyline::error::ReadlineError;
@@ -22,31 +24,14 @@ pub struct Repl {
 }
 
 impl ReplCompletion for Repl {
-    fn complete<'a, T>(mut words: T, pos: usize) -> (usize, Vec<String>) where
-        T: Iterator<Item=&'a str> {
-        let possible_first_words = vec!["connect", "devices", "send", "quit"]
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
-
-        let first_word = match words.next() {
-            Some(w) => w,
-            None => return (0, possible_first_words),
-        };
-
-        //TODO consider the case that there are two options, one being a substring of another,
-        // e.g. `send' and `sendll'
-        // Maybe make spaces relevant here, etc.
-        if possible_first_words.contains(&first_word.to_string()) {
-            match first_word {
-                "send" => Message::complete(words, pos),
-                _ => (pos, vec![]),
-            }
-        } else {
-            // TODO improve position, see completion.rs
-            (pos - first_word.len(), possible_first_words.into_iter()
-                .filter(|s| s.starts_with(first_word)).collect())
-        }
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        let mut m = HashMap::new();
+        m.insert("connect".to_string(), None);
+        m.insert("devices".to_string(), None);
+        m.insert("send".to_string(), Some(Message::complete as _));
+        m.insert("quit".to_string(), None);
+        m
     }
 }
 

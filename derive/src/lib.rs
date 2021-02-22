@@ -43,31 +43,31 @@ pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStre
     let arms = variants.iter().map(|v| variant_to_repl_completion(v));
 
     let repl_completion_expanded = quote! {
-        impl crate::repl::ReplCompletion for #enum_name {
-            fn complete<'__a, __T>(mut words: __T, pos: usize) -> (usize, Vec<String>) where
-                __T: Iterator<Item=&'__a str> {
-                let possible_first_words = vec![#(stringify!(#variant_names)),*]
-                    .into_iter().map(|s| s.to_string()).collect();
+        //impl crate::repl::ReplCompletion for #enum_name {
+        //    fn complete<'__a, __T>(mut words: __T, pos: usize) -> (usize, Vec<String>) where
+        //        __T: Iterator<Item=&'__a str> {
+        //        let possible_first_words = vec![#(stringify!(#variant_names)),*]
+        //            .into_iter().map(|s| s.to_string()).collect();
 
-                let first_word = match words.next() {
-                    Some(w) => w,
-                    None => return (0, possible_first_words),
-                };
+        //        let first_word = match words.next() {
+        //            Some(w) => w,
+        //            None => return (0, possible_first_words),
+        //        };
 
-                //TODO consider the case that there are two options, one being a substring of another,
-                // Maybe make spaces relevant here, etc.
-                if possible_first_words.contains(&first_word.to_string()) {
-                    match first_word {
-                        #(#arms)*
-                        _ => (pos, vec![]),
-                    }
-                } else {
-                    // TODO improve position, see completion.rs
-                    (pos - first_word.len(), possible_first_words.into_iter()
-                        .filter(|s| s.starts_with(first_word)).collect())
-                }
-            }
-        }
+        //        //TODO consider the case that there are two options, one being a substring of another,
+        //        // Maybe make spaces relevant here, etc.
+        //        if possible_first_words.contains(&first_word.to_string()) {
+        //            match first_word {
+        //                #(#arms)*
+        //                _ => (pos, vec![]),
+        //            }
+        //        } else {
+        //            // TODO improve position, see completion.rs
+        //            (pos - first_word.len(), possible_first_words.into_iter()
+        //                .filter(|s| s.starts_with(first_word)).collect())
+        //        }
+        //    }
+        // }
     };
 
     proc_macro::TokenStream::from(quote! { #from_repl_expanded #repl_completion_expanded })

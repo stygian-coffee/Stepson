@@ -1,6 +1,7 @@
 pub mod ack;
 pub mod data_mdr;
 
+use std::collections::HashMap;
 use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, FromPrimitive};
@@ -78,9 +79,9 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
-        T: Iterator<Item=&'a str> {
-        Data::complete(words, pos)
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        unimplemented!()
     }
 }
 

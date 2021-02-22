@@ -36,12 +36,12 @@ impl FromRepl for DataMdr {
     }
 }
 
-impl ReplCompletion for DataMdr {
-    fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
-        T: Iterator<Item=&'a str> {
-        Command::complete(words, pos)
-    }
-}
+// impl ReplCompletion for DataMdr {
+//     fn complete<'a, T>(words: T, pos: usize) -> (usize, Vec<String>) where
+//         T: Iterator<Item=&'a str> {
+//         Command::complete(words, pos)
+//     }
+// }
 
 impl Serializable for DataMdr {
     fn serialize(&self) -> Vec<u8> {

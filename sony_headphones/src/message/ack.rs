@@ -11,12 +11,12 @@ impl FromRepl for Ack {
     }
 }
 
-impl ReplCompletion for Ack {
-    fn complete<'a, T>(_words: T, pos: usize) -> (usize, Vec<String>) where
-        T: Iterator<Item=&'a str> {
-        (pos, vec![])
-    }
-}
+// impl ReplCompletion for Ack {
+//     fn complete<'a, T>(_words: T, pos: usize) -> (usize, Vec<String>) where
+//         T: Iterator<Item=&'a str> {
+//         (pos, vec![])
+//     }
+// }
 
 impl Serializable for Ack {
     fn serialize(&self) -> Vec<u8> {
