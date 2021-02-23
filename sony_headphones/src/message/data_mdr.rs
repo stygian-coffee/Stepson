@@ -39,9 +39,9 @@ impl FromRepl for DataMdr {
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-        where T: Iterator<Item=String> {
-        Command::completion_map()
+    fn completion_map(words: &Vec<String>)
+        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
+        Command::completion_map(words)
     }
 }
 

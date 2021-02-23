@@ -79,9 +79,9 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-        where T: Iterator<Item=String> {
-        Data::completion_map()
+    fn completion_map(words: &Vec<String>)
+        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
+        Data::completion_map(words)
     }
 }
 

@@ -9,20 +9,21 @@ use rustyline::validate::Validator;
 use super::Repl;
 
 pub trait ReplCompletion {
-    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-        where T: Iterator<Item=String>, Self: Sized;
+    fn completion_map(words: &Vec<String>)
+        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>>
+        where Self: Sized;
 
-    fn complete<T>(mut words: T, pos: usize) -> (usize, Vec<String>) where
-        T: Iterator<Item=String>, Self: Sized {
-        let completion_map: HashMap<String, _> = Self::completion_map().into_iter()
+    fn complete(mut words: Vec<String>, pos: usize) -> (usize, Vec<String>) where
+        Self: Sized {
+        let completion_map: HashMap<String, _> = Self::completion_map(&words).into_iter()
             .map(|(k, v)| (k.to_string(), v)).collect();
 
-        let first_word = match words.next() {
+        let first_word = match words.pop() {
             Some(w) => w,
             None => return (0, completion_map.into_iter().map(|(k, _)| k).collect()),
         };
 
-        if completion_map.contains_key(&first_word.to_string()) {
+        if completion_map.contains_key(&first_word) {
             match completion_map.get(&first_word).unwrap() {
                 Some(f) => f(words, pos),
                 None => (pos, vec![])
@@ -40,8 +41,8 @@ pub trait ReplCompletion {
 }
 
 impl ReplCompletion for u8 {
-    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-        where T: Iterator<Item=String> {
+    fn completion_map(_words: &Vec<String>)
+        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
         HashMap::new()
     }
 }
@@ -53,7 +54,7 @@ impl Completer for ReplHelper {
 
     fn complete(&self, line: &str, pos: usize, _ctx: &Context<'_>)
         -> Result<(usize, Vec<Self::Candidate>)> {
-        let words = line.split_whitespace().map(|s| s.to_string());
+        let words = line.split_whitespace().rev().map(|s| s.to_string()).collect();
 
         let (write_pos, candidates) = Repl::complete(words, pos);
         Ok((write_pos, candidates)) //TODO fails for e.g. s + space + tab

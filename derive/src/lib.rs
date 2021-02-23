@@ -127,8 +127,8 @@ fn repl_completion(input: DeriveInput) -> TokenStream {
 
     quote! {
         impl ReplCompletion for #type_name {
-            fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-                where T: Iterator<Item=String>, Self: Sized {
+            fn completion_map(words: &Vec<String>)
+                -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
                 #inner
             }
         }
