@@ -39,7 +39,11 @@ pub trait ReplCompletion {
     }
 }
 
-impl dyn ReplCompletion {
+impl ReplCompletion for u8 {
+    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+        where T: Iterator<Item=String> {
+        HashMap::new()
+    }
 }
 
 pub(super) struct ReplHelper;

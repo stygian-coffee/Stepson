@@ -3,7 +3,7 @@ use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::repl::{FromRepl, ReplCompletion, ParseError};
+use crate::repl::{FromRepl, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.param.AsmId
@@ -92,49 +92,28 @@ pub enum NcSettingValue {
     On = 1,
 }
 
-#[derive(Debug)]
-pub struct NcAsmSetParam {
-    pub nc_asm_inquired_type: NcAsmInquiredType,
-    pub nc_asm_effect: NcAsmEffect,
-    pub nc_asm_setting_type: NcAsmSettingType,
-    pub nc_dual_single_value: NcDualSingleValue,
-    pub asm_setting_type: AsmSettingType,
-    pub asm_id: AsmId,
-    pub asm_level: u8, //TODO understand level
-}
-
-impl FromRepl for NcAsmSetParam {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
-        T: Iterator<Item=&'a str> {
-        Ok(Self {
-            nc_asm_inquired_type: NcAsmInquiredType::from_repl(&mut words.take(1))?,
-            nc_asm_effect: NcAsmEffect::from_repl(&mut words.take(1))?,
-            nc_asm_setting_type: NcAsmSettingType::from_repl(&mut words.take(1))?,
-            nc_dual_single_value: NcDualSingleValue::from_repl(&mut words.take(1))?,
-            asm_setting_type: AsmSettingType::from_repl(&mut words.take(1))?,
-            asm_id: AsmId::from_repl(&mut words.take(1))?,
-            asm_level: u8::from_repl(&mut words.take(1))?, //TODO understand level
-        })
-    }
-}
-
-impl ReplCompletion for NcAsmSetParam {
-    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-        where T: Iterator<Item=String> {
-        unimplemented!()
-    }
-}
+#[derive(Debug, FromRepl)]
+//TODO understand asm level (i.e. the u8)
+pub struct NcAsmSetParam(
+    NcAsmInquiredType,
+    NcAsmEffect,
+    NcAsmSettingType,
+    NcDualSingleValue,
+    AsmSettingType,
+    AsmId,
+    u8,
+);
 
 impl Serializable for NcAsmSetParam {
     fn serialize(&self) -> Vec<u8> {
         vec![
-            self.nc_asm_inquired_type.into(),
-            self.nc_asm_effect.into(),
-            self.nc_asm_setting_type.into(),
-            self.nc_dual_single_value.into(),
-            self.asm_setting_type.into(),
-            self.asm_id.into(),
-            self.asm_level.into(),
+            self.0.into(),
+            self.1.into(),
+            self.2.into(),
+            self.3.into(),
+            self.4.into(),
+            self.5.into(),
+            self.6.into(),
         ]
     }
 
@@ -143,38 +122,17 @@ impl Serializable for NcAsmSetParam {
     }
 }
 
-#[derive(Debug)]
-pub struct NcAsmNtfyParam {
-    pub nc_asm_inquired_type: NcAsmInquiredType,
-    pub nc_asm_effect: NcAsmEffect,
-    pub nc_asm_setting_type: NcAsmSettingType,
-    pub nc_dual_single_value: NcDualSingleValue,
-    pub asm_setting_type: AsmSettingType,
-    pub asm_id: AsmId,
-    pub asm_level: u8, //TODO understand level
-}
-
-impl FromRepl for NcAsmNtfyParam {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
-        T: Iterator<Item=&'a str> {
-        Ok(Self {
-            nc_asm_inquired_type: NcAsmInquiredType::from_repl(&mut words.take(1))?,
-            nc_asm_effect: NcAsmEffect::from_repl(&mut words.take(1))?,
-            nc_asm_setting_type: NcAsmSettingType::from_repl(&mut words.take(1))?,
-            nc_dual_single_value: NcDualSingleValue::from_repl(&mut words.take(1))?,
-            asm_setting_type: AsmSettingType::from_repl(&mut words.take(1))?,
-            asm_id: AsmId::from_repl(&mut words.take(1))?,
-            asm_level: u8::from_repl(&mut words.take(1))?, //TODO understand level
-        })
-    }
-}
-
-impl ReplCompletion for NcAsmNtfyParam {
-    fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
-        where T: Iterator<Item=String> {
-        unimplemented!()
-    }
-}
+#[derive(Debug, FromRepl)]
+//TODO understand asm level (i.e. the u8)
+pub struct NcAsmNtfyParam(
+    NcAsmInquiredType,
+    NcAsmEffect,
+    NcAsmSettingType,
+    NcDualSingleValue,
+    AsmSettingType,
+    AsmId,
+    u8,
+);
 
 impl Serializable for NcAsmNtfyParam {
     fn serialize(&self) -> Vec<u8> {
@@ -182,14 +140,14 @@ impl Serializable for NcAsmNtfyParam {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
-        Ok(Self {
-            nc_asm_inquired_type: bytes[0].try_into()?,
-            nc_asm_effect: bytes[1].try_into()?,
-            nc_asm_setting_type: bytes[2].try_into()?,
-            nc_dual_single_value: bytes[3].try_into()?,
-            asm_setting_type: bytes[4].try_into()?,
-            asm_id: bytes[5].try_into()?,
-            asm_level: bytes[6],
-        })
+        Ok(Self(
+            bytes[0].try_into()?,
+            bytes[1].try_into()?,
+            bytes[2].try_into()?,
+            bytes[3].try_into()?,
+            bytes[4].try_into()?,
+            bytes[5].try_into()?,
+            bytes[6],
+        ))
     }
 }

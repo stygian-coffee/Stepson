@@ -1,127 +1,205 @@
-//use proc_macro2::TokenStream;
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, Variant};
+use syn::{parse_macro_input, Data, DataStruct, DataEnum, DeriveInput, Fields};
 
 #[proc_macro_derive(FromRepl)]
 pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let enum_name = input.ident;
+    let from_repl = from_repl(input.clone());
+    let repl_completion = repl_completion(input);
 
-    // data must be an enum; get its variants
-    let variants = match input.data {
-        Data::Enum(d) => d,
-        _ => panic!("{} must be an enum", enum_name),
-    }.variants;
+    proc_macro::TokenStream::from(quote! { #from_repl #repl_completion })
+}
 
-    // now, turn each variant into a match arm for FromRepl
-    let arms = variants.iter().map(|v| variant_to_from_repl(&enum_name, v));
+fn from_repl(input: DeriveInput) -> TokenStream {
+    let type_name = input.ident;
 
-    // finally, create the impl
-    let from_repl_expanded = quote! {
-        impl FromRepl for #enum_name {
+    let inner = match input.data {
+        Data::Struct(data) => from_repl_struct(data),
+        Data::Enum(data) => from_repl_enum(data),
+        Data::Union(_) => unimplemented!(),
+    };
+
+    quote! {
+        impl FromRepl for #type_name {
             fn from_repl<'a, T>(words: &mut T)
                 -> Result<Self, crate::repl::from_repl::ParseError> where
                 T: Iterator<Item=&'a str> {
-                use crate::repl::from_repl::ParseError;
-
-                let word = match words.next() {
-                    Some(w) => w,
-                    None => return Err(ParseError::ExpectedArgument),
-                };
-
-                Ok(match word {
-                    #(#arms)*
-                    _ => return Err(ParseError::UnknownArgument(word.to_string())),
-                })
+                #inner
             }
         }
-    };
-
-    let inserts = variants.iter().map(|v| variant_to_repl_completion(v));
-
-    let repl_completion_expanded = quote! {
-        impl crate::repl::ReplCompletion for #enum_name {
-            fn completion_map<__T>()
-                -> HashMap<String, Option<fn(__T, usize) -> (usize, Vec<String>)>>
-                where __T: Iterator<Item=String> {
-                let mut m = std::collections::HashMap::new();
-                #(#inserts)*
-                m.into()
-            }
-        }
-    };
-
-    proc_macro::TokenStream::from(quote! { #from_repl_expanded #repl_completion_expanded })
-}
-
-fn variant_to_from_repl(enum_name: &proc_macro2::Ident, variant: &Variant)
-    -> proc_macro2::TokenStream {
-    let variant_name = &variant.ident;
-
-    //TODO find some way to not force the existence of a variant named "Unknown"
-    if variant_name == "Unknown" {
-        return quote! {
-            _ => {
-                let mut v = vec![<u8 as std::str::FromStr>::from_str(word)?];
-                v.append(&mut Vec::<u8>::from_repl(words)?);
-                #enum_name::#variant_name(v)
-            },
-        }
-    }
-
-    // if discriminant, than no variant
-    if let Some(_) = variant.discriminant {
-        return quote! {
-            stringify!(#variant_name) => Self::#variant_name,
-        }
-    }
-
-    // otherwise, enum variant has one unnamed field; get it
-    let field = match variant.fields.clone() {
-        Fields::Unnamed(f) => f,
-        _ => unreachable!(), //TODO is this really unreachable?
-    }.unnamed.into_iter().nth(0).unwrap();
-    //TODO helpful error message? check length of iter?
-
-    //TODO helpful error message if field.ident is None
-    let field_type = field.ty;
-
-    quote! {
-        stringify!(#variant_name) => #enum_name::#variant_name(#field_type::from_repl(words)?),
     }
 }
 
-fn variant_to_repl_completion(variant: &Variant) -> proc_macro2::TokenStream {
-    let variant_name = &variant.ident;
-
-    //TODO find some way to not force the existence of a variant named "Unknown"
-    if variant_name == "Unknown" {
-        return proc_macro2::TokenStream::new();
+fn from_repl_struct(data: DataStruct) -> TokenStream {
+    match data.fields {
+        Fields::Named(_fields) => {
+            unimplemented!()
+        },
+        Fields::Unnamed(fields) => {
+            let mut lines = vec![];
+            for f in fields.unnamed {
+                let ty = f.ty;
+                lines.push(quote! {
+                    #ty::from_repl(&mut words.take(1))?,
+                });
+            }
+            quote! {
+                Ok(Self(
+                    #(#lines)*
+                ))
+            }
+        },
+        Fields::Unit => quote! {
+            vec![].into_iter()
+        },
     }
+}
 
-    let fn_option = {
+fn from_repl_enum(data: DataEnum) -> TokenStream {
+    let variants = data.variants.into_iter();
+
+    let mut match_arms = vec![];
+    for variant in variants {
+        let variant_name = variant.ident;
+
+        //TODO find some way to not force the existence of a variant named "Unknown"
+        if variant_name == "Unknown" {
+            match_arms.push(quote! {
+                _ => {
+                    let mut v = vec![<u8 as std::str::FromStr>::from_str(word)?];
+                    v.append(&mut Vec::<u8>::from_repl(words)?);
+                    Self::#variant_name(v) // i.e. Self::Unknown
+                },
+            });
+            continue;
+        }
+
         // if discriminant, then no field
         if let Some(_) = variant.discriminant {
-            quote! { None }
-        } else {
-            // otherwise, enum variant has one unnamed field; get it
-            let field = match variant.fields.clone() {
-                Fields::Unnamed(f) => f,
-                _ => unreachable!(), //TODO is this really unreachable?
-            }.unnamed.into_iter().nth(0).unwrap();
-            //TODO helpful error message? check length of iter?
-
-            //TODO helpful error message if field.ident is None
-            let field_type = field.ty;
-
-            quote! {
-                Some(#field_type::complete as _)
-            }
+            match_arms.push(quote! {
+                stringify!(#variant_name) => Self::#variant_name,
+            });
+            continue;
         }
+
+        // otherwise, variant has one unnamed field
+        // TODO support multiple fields or named fields?
+        let fields = match variant.fields {
+            Fields::Unnamed(f) => f,
+            _ => unimplemented!(),
+        }.unnamed;
+        let field = match fields.into_iter().nth(0) {
+            Some(f) => f,
+            None => unimplemented!(),
+        };
+        let ty = field.ty;
+
+        match_arms.push(quote! {
+            stringify!(#variant_name) => Self::#variant_name(#ty::from_repl(words)?),
+        });
+    }
+
+    quote! {
+        use crate::repl::from_repl::ParseError;
+
+        let word = match words.next() {
+            Some(w) => w,
+            None => return Err(ParseError::ExpectedArgument),
+        };
+
+        Ok(match word {
+            #(#match_arms)*
+            _ => return Err(ParseError::UnknownArgument(word.to_string())),
+        })
+    }
+}
+
+fn repl_completion(input: DeriveInput) -> TokenStream {
+    let type_name = input.ident;
+
+    let inner = match input.data {
+        Data::Struct(data) => repl_completion_struct(data),
+        Data::Enum(data) => repl_completion_enum(data),
+        Data::Union(_) => unimplemented!(),
     };
 
     quote! {
-        m.insert(stringify!(#variant_name).to_string(), #fn_option);
+        impl ReplCompletion for #type_name {
+            fn completion_map<T>() -> HashMap<String, Option<fn(T, usize) -> (usize, Vec<String>)>>
+                where T: Iterator<Item=String>, Self: Sized {
+                #inner
+            }
+        }
+    }
+}
+
+fn repl_completion_struct(data: DataStruct) -> TokenStream {
+    match data.fields {
+        Fields::Named(_fields) => {
+            unimplemented!()
+        },
+        Fields::Unnamed(fields) => {
+            let mut lines = vec![];
+            for f in fields.unnamed {
+                let ty = f.ty;
+                lines.push(quote! {
+                    m.insert(stringify!(#ty).to_string(), Some(#ty::complete as _));
+                });
+            }
+            quote! {
+                let mut m = std::collections::HashMap::new();
+                #(#lines)*
+                m
+            }
+        },
+        Fields::Unit => quote! {
+            std::collections::HashMap::new()
+        }
+    }
+}
+
+fn repl_completion_enum(data: DataEnum) -> TokenStream {
+    let variants = data.variants.into_iter();
+
+    let mut lines = vec![];
+    for variant in variants {
+        let variant_name = variant.ident;
+
+        //TODO find some way to not force the existence of a variant named "Unknown"
+        if variant_name == "Unknown" {
+            continue;
+        }
+
+        // if discriminant, then no field
+        if let Some(_) = variant.discriminant {
+            lines.push(quote! {
+                m.insert(stringify!(#variant_name).to_string(), None);
+            });
+            continue;
+        }
+
+        // otherwise, variant has one unnamed field
+        // TODO support multiple fields or named fields?
+        let fields = match variant.fields {
+            Fields::Unnamed(f) => f,
+            _ => unimplemented!(),
+        }.unnamed;
+        let field = match fields.into_iter().nth(0) {
+            Some(f) => f,
+            None => unimplemented!(),
+        };
+        let ty = field.ty;
+
+        lines.push(quote! {
+            m.insert(stringify!(#variant_name).to_string(), Some(#ty::complete as _));
+        });
+    }
+
+    quote! {
+        let mut m = std::collections::HashMap::new();
+        #(#lines)*
+        m
     }
 }
