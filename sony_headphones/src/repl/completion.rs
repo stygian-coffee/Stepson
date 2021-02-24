@@ -23,12 +23,14 @@ pub trait ReplCompletion {
             None => return (0, completion_map.into_iter().map(|(k, _)| k).collect()),
         };
 
-        if completion_map.contains_key(&first_word) {
-            match completion_map.get(&first_word).unwrap() {
+        if !words.is_empty() {
+            // if we are here, then we aren't at the last word in the line
+            match completion_map.get(&first_word).map(|opt| opt.as_ref()).flatten() {
                 Some(f) => f(words, pos),
-                None => (pos, vec![])
+                None => (pos, vec![]),
             }
         } else {
+            // if we are here, then words consists only of first_word
             (pos - first_word.len(), completion_map.into_iter()
                 .filter_map(|(k, _)| {
                     match k.starts_with(&first_word) {
@@ -54,10 +56,18 @@ impl Completer for ReplHelper {
 
     fn complete(&self, line: &str, pos: usize, _ctx: &Context<'_>)
         -> Result<(usize, Vec<Self::Candidate>)> {
-        let words = line.split_whitespace().rev().map(|s| s.to_string()).collect();
+        let mut words = if line.ends_with(|c: char| c.is_whitespace()) {
+            vec![String::new()]
+        } else {
+            vec![]
+        };
+        words.append(&mut line.split_whitespace().rev().map(|s| s.to_string()).collect());
 
-        let (write_pos, candidates) = Repl::complete(words, pos);
-        Ok((write_pos, candidates)) //TODO fails for e.g. s + space + tab
+        let (write_pos, mut candidates) = Repl::complete(words, pos);
+        for s in &mut candidates {
+            s.push(' ');
+        }
+        Ok((write_pos, candidates))
     }
 }
 
