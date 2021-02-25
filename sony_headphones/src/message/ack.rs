@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::serializable::{DeserializeError, Serializable};
-use crate::repl::{FromRepl, ReplCompletion, ParseError};
+use crate::repl::{FromRepl, ReplCompletion, CompletionContext, ParseError};
 
 #[derive(Debug)]
 pub struct Ack {}
@@ -14,8 +14,9 @@ impl FromRepl for Ack {
 }
 
 impl ReplCompletion for Ack {
-    fn completion_map(_words: &Vec<String>)
-        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
+    fn completion_map(_cx: &CompletionContext)
+        -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext)
+            -> (usize, Vec<String>)>> {
         HashMap::new()
     }
 }

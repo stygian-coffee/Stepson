@@ -8,14 +8,20 @@ use rustyline::validate::Validator;
 
 use super::Repl;
 
-pub trait ReplCompletion {
-    fn completion_map(words: &Vec<String>)
-        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>>
-        where Self: Sized;
+#[derive(Debug)]
+pub struct CompletionContext {
+    pub all_words: Vec<String>,
+    pub current_pos: usize,
+}
 
-    fn complete(mut words: Vec<String>, pos: usize) -> (usize, Vec<String>) where
-        Self: Sized {
-        let completion_map: HashMap<String, _> = Self::completion_map(&words).into_iter()
+pub trait ReplCompletion {
+    fn completion_map(cx: &CompletionContext)
+        -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext)
+            -> (usize, Vec<String>)>> where Self: Sized;
+
+    fn complete(mut words: Vec<String>, pos: usize, mut cx: CompletionContext)
+        -> (usize, Vec<String>) where Self: Sized {
+        let completion_map: HashMap<String, _> = Self::completion_map(&cx).into_iter()
             .map(|(k, v)| (k.to_string(), v)).collect();
 
         let first_word = match words.pop() {
@@ -26,7 +32,10 @@ pub trait ReplCompletion {
         if !words.is_empty() {
             // if we are here, then we aren't at the last word in the line
             match completion_map.get(&first_word).map(|opt| opt.as_ref()).flatten() {
-                Some(f) => f(words, pos),
+                Some(f) => {
+                    cx.current_pos += 1;
+                    f(words, pos, cx)
+                }
                 None => (pos, vec![]),
             }
         } else {
@@ -43,8 +52,9 @@ pub trait ReplCompletion {
 }
 
 impl ReplCompletion for u8 {
-    fn completion_map(_words: &Vec<String>)
-        -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
+    fn completion_map(_cx: &CompletionContext)
+        -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext)
+            -> (usize, Vec<String>)>> {
         HashMap::new()
     }
 }
@@ -63,7 +73,12 @@ impl Completer for ReplHelper {
         };
         words.append(&mut line.split_whitespace().rev().map(|s| s.to_string()).collect());
 
-        let (write_pos, mut candidates) = Repl::complete(words, pos);
+        let cx = CompletionContext {
+            all_words: words.clone(),
+            current_pos: 0,
+        };
+
+        let (write_pos, mut candidates) = Repl::complete(words, pos, cx);
         for s in &mut candidates {
             s.push(' ');
         }

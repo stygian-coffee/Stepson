@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DataStruct, DataEnum, DeriveInput, Fields};
+use syn::{parse_macro_input, Data, DataStruct, DataEnum, DeriveInput, Ident, Fields};
 
 #[proc_macro_derive(FromRepl)]
 pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -120,37 +120,47 @@ fn repl_completion(input: DeriveInput) -> TokenStream {
     let type_name = input.ident;
 
     let inner = match input.data {
-        Data::Struct(data) => repl_completion_struct(data),
+        Data::Struct(data) => repl_completion_struct(&type_name, data),
         Data::Enum(data) => repl_completion_enum(data),
         Data::Union(_) => unimplemented!(),
     };
 
     quote! {
         impl ReplCompletion for #type_name {
-            fn completion_map(words: &Vec<String>)
-                -> HashMap<String, Option<fn(Vec<String>, usize) -> (usize, Vec<String>)>> {
+            fn completion_map(cx: &crate::repl::CompletionContext)
+                -> HashMap<String, Option<fn(Vec<String>, usize, crate::repl::CompletionContext)
+                    -> (usize, Vec<String>)>> {
                 #inner
             }
         }
     }
 }
 
-fn repl_completion_struct(data: DataStruct) -> TokenStream {
+fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
     match data.fields {
         Fields::Named(_fields) => {
             unimplemented!()
         },
         Fields::Unnamed(fields) => {
-            let mut lines = vec![];
-            for f in fields.unnamed {
+            let mut branches = vec![];
+            for (i, f) in fields.unnamed.into_iter().enumerate() {
                 let ty = f.ty;
-                lines.push(quote! {
-                    m.insert(stringify!(#ty).to_string(), Some(#ty::complete as _));
+                branches.push(quote! {
+                    #i => {
+                        for word in #ty::completion_map(&cx).into_iter().map(|(k, _)| k) {
+                            m.insert(word, Some(Self::complete as _));
+                        }
+                    },
                 });
             }
             quote! {
+                let ahead_by = cx.current_pos - cx.all_words.iter().rev()
+                    .position(|s| s == stringify!(#type_name)).unwrap();
                 let mut m = std::collections::HashMap::new();
-                #(#lines)*
+                match ahead_by - 1 {
+                    #(#branches)*
+                    _ => unreachable!(),
+                }
                 m
             }
         },
