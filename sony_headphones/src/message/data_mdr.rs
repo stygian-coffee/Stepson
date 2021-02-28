@@ -2,9 +2,9 @@ pub mod nc_asm;
 
 use std::collections::HashMap;
 
-use num_enum::{IntoPrimitive, FromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::repl::{FromRepl, ReplCompletion, CompletionContext, ParseError};
+use crate::repl::{CompletionContext, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.Command
@@ -28,20 +28,25 @@ pub enum Command {
 
 #[derive(Debug)]
 pub struct DataMdr {
-    pub command: Command
+    pub command: Command,
 }
 
 impl FromRepl for DataMdr {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
-        T: Iterator<Item=&'a str> {
-        Ok(Self { command: Command::from_repl(words)? })
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError>
+    where
+        T: Iterator<Item = &'a str>,
+    {
+        Ok(Self {
+            command: Command::from_repl(words)?,
+        })
     }
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_map(cx: &CompletionContext)
-        -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext)
-            -> (usize, Vec<String>)>> {
+    fn completion_map(
+        cx: &CompletionContext,
+    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
+    {
         Command::completion_map(cx)
     }
 }
@@ -68,8 +73,12 @@ impl Serializable for DataMdr {
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
         let command_type = bytes[0].into();
         let command = match command_type {
-            CommandType::NcAsmSetParam => Command::NcAsmSetParam(nc_asm::NcAsmSetParam::deserialize(&bytes[1..])?),
-            CommandType::NcAsmNtfyParam => Command::NcAsmNtfyParam(nc_asm::NcAsmNtfyParam::deserialize(&bytes[1..])?),
+            CommandType::NcAsmSetParam => {
+                Command::NcAsmSetParam(nc_asm::NcAsmSetParam::deserialize(&bytes[1..])?)
+            }
+            CommandType::NcAsmNtfyParam => {
+                Command::NcAsmNtfyParam(nc_asm::NcAsmNtfyParam::deserialize(&bytes[1..])?)
+            }
             CommandType::Unknown => Command::Unknown(bytes[1..].to_vec()),
         };
         Ok(Self { command })

@@ -24,9 +24,10 @@ pub struct Repl {
 }
 
 impl ReplCompletion for Repl {
-    fn completion_map(_cx: &CompletionContext)
-        -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext)
-            -> (usize, Vec<String>)>> {
+    fn completion_map(
+        _cx: &CompletionContext,
+    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
+    {
         let mut m = HashMap::new();
         m.insert("connect".to_string(), None);
         m.insert("devices".to_string(), None);
@@ -38,7 +39,7 @@ impl ReplCompletion for Repl {
 
 impl Repl {
     pub fn new() -> Result<Self> {
-        Ok(Self { 
+        Ok(Self {
             manager: Manager::new()?,
             device: None,
             message_queue: None,
@@ -60,8 +61,8 @@ impl Repl {
                     if self.execute_command(line).await {
                         break;
                     }
-                },
-                Err(ReadlineError::Interrupted) => {},
+                }
+                Err(ReadlineError::Interrupted) => {}
                 Err(ReadlineError::Eof) => break,
                 Err(e) => return Err(e.into()),
             }
@@ -102,8 +103,10 @@ impl Repl {
         Ok(false)
     }
 
-    async fn connect<'a, T>(&mut self, words: &mut T) -> Result<ShouldExit> where
-        T: Iterator<Item=&'a str> {
+    async fn connect<'a, T>(&mut self, words: &mut T) -> Result<ShouldExit>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         let addr = match words.next() {
             Some(w) => w.to_uppercase(),
             None => {
@@ -137,8 +140,10 @@ impl Repl {
         Ok(false)
     }
 
-    async fn devices<'a, T>(&self, words: &mut T) -> Result<ShouldExit> where
-        T: Iterator<Item=&'a str> {
+    async fn devices<'a, T>(&self, words: &mut T) -> Result<ShouldExit>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         if let Some(_) = words.next() {
             println!("devices: too many arguments, expected 0");
             return Ok(false);
@@ -153,14 +158,16 @@ impl Repl {
         Ok(false)
     }
 
-    async fn send<'a, T>(&self, words: &mut T) -> Result<ShouldExit> where
-        T: Iterator<Item=&'a str> {
+    async fn send<'a, T>(&self, words: &mut T) -> Result<ShouldExit>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         let message_queue = match &self.message_queue {
             Some(s) => s,
             None => {
                 println!("send: not connected to a device");
                 return Ok(false);
-            },
+            }
         };
 
         let message = match Message::from_repl(words) {
@@ -178,14 +185,16 @@ impl Repl {
         Ok(false)
     }
 
-    async fn quit<'a, T>(&mut self, words: &mut T) -> Result<ShouldExit> where
-        T: Iterator<Item=&'a str> {
+    async fn quit<'a, T>(&mut self, words: &mut T) -> Result<ShouldExit>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         match words.next() {
             Some(_) => {
                 println!("quit: too many arguments, expected 0");
                 Ok(false)
-            },
-            None => Ok(true)
+            }
+            None => Ok(true),
         }
     }
 }

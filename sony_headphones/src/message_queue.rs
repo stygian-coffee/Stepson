@@ -1,7 +1,7 @@
 use anyhow::Result;
 
-use tokio::io::{AsyncRead, AsyncWrite, BufReader,
-    AsyncReadExt, AsyncBufReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{BufReader, ReadHalf, WriteHalf};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::message;
@@ -17,14 +17,15 @@ pub struct MessageQueue {
 }
 
 impl MessageQueue {
-    pub fn new<T>(stream: T) -> Self where
-        T: 'static + AsyncRead + AsyncWrite + Send {
+    pub fn new<T>(stream: T) -> Self
+    where
+        T: 'static + AsyncRead + AsyncWrite + Send,
+    {
         let (read_stream, write_stream) = tokio::io::split(stream);
 
-        let (recv_loop_sender, recv_loop_receiver)
-            = mpsc::unbounded_channel::<Result<Message>>();
-        let (send_loop_sender, send_loop_receiver)
-            = mpsc::unbounded_channel::<MessageReturnError>();
+        let (recv_loop_sender, recv_loop_receiver) = mpsc::unbounded_channel::<Result<Message>>();
+        let (send_loop_sender, send_loop_receiver) =
+            mpsc::unbounded_channel::<MessageReturnError>();
 
         tokio::task::spawn(async move {
             recv_loop(read_stream, recv_loop_sender).await;
@@ -34,7 +35,10 @@ impl MessageQueue {
             send_loop(write_stream, send_loop_receiver).await;
         });
 
-        Self { recv_loop_receiver, send_loop_sender }
+        Self {
+            recv_loop_receiver,
+            send_loop_sender,
+        }
     }
 
     pub async fn recv(&mut self) -> Option<Result<Message>> {
@@ -47,14 +51,19 @@ impl MessageQueue {
 
     pub fn split(self) -> (RecvHalf, SendHalf) {
         (
-            RecvHalf { recv_loop_receiver: self.recv_loop_receiver },
-            SendHalf { send_loop_sender: self.send_loop_sender }
+            RecvHalf {
+                recv_loop_receiver: self.recv_loop_receiver,
+            },
+            SendHalf {
+                send_loop_sender: self.send_loop_sender,
+            },
         )
     }
 }
 
-async fn recv_priv(recv_loop_receiver: &mut mpsc::UnboundedReceiver<Result<Message>>)
-    -> Option<Result<Message>> {
+async fn recv_priv(
+    recv_loop_receiver: &mut mpsc::UnboundedReceiver<Result<Message>>,
+) -> Option<Result<Message>> {
     recv_loop_receiver.recv().await
 }
 
@@ -72,10 +81,10 @@ async fn send_priv(
 }
 
 /// reads messages from `stream`, deserializes them, and sends them to `queue`
-async fn recv_loop<T>(
-    stream: ReadHalf<T>,
-    recv_loop_sender: mpsc::UnboundedSender<Result<Message>>,
-) where T: AsyncRead {
+async fn recv_loop<T>(stream: ReadHalf<T>, recv_loop_sender: mpsc::UnboundedSender<Result<Message>>)
+where
+    T: AsyncRead,
+{
     let mut stream = BufReader::new(stream);
     loop {
         if let Err(_) = recv_loop_sender.send(recv_loop_inner(&mut stream).await) {
@@ -85,8 +94,10 @@ async fn recv_loop<T>(
     }
 }
 
-async fn recv_loop_inner<T>(stream: &mut BufReader<T>) -> Result<Message> where
-    T: AsyncRead + Unpin {
+async fn recv_loop_inner<T>(stream: &mut BufReader<T>) -> Result<Message>
+where
+    T: AsyncRead + Unpin,
+{
     // read until message start byte
     sink_until(stream, message::MESSAGE_START).await?;
 
@@ -99,8 +110,10 @@ async fn recv_loop_inner<T>(stream: &mut BufReader<T>) -> Result<Message> where
     Ok(message)
 }
 
-async fn sink_until<T>(stream: &mut BufReader<T>, byte: u8) -> Result<()> where
-    T: AsyncRead + Unpin {
+async fn sink_until<T>(stream: &mut BufReader<T>, byte: u8) -> Result<()>
+where
+    T: AsyncRead + Unpin,
+{
     loop {
         let b = stream.read_u8().await?;
         if b == byte {
@@ -113,8 +126,10 @@ async fn sink_until<T>(stream: &mut BufReader<T>, byte: u8) -> Result<()> where
 /// receives messages from `queue`, serializes them, and writes them to `stream`
 async fn send_loop<T>(
     mut stream: WriteHalf<T>,
-    mut send_loop_receiver: mpsc::UnboundedReceiver<MessageReturnError>
-) where T: AsyncWrite {
+    mut send_loop_receiver: mpsc::UnboundedReceiver<MessageReturnError>,
+) where
+    T: AsyncWrite,
+{
     loop {
         let (message, tx) = match send_loop_receiver.recv().await {
             Some(x) => x,
@@ -127,10 +142,15 @@ async fn send_loop<T>(
     }
 }
 
-async fn send_loop_inner<T>(stream: &mut WriteHalf<T>, message: Message) -> Result<()> where
-    T: AsyncWrite {
+async fn send_loop_inner<T>(stream: &mut WriteHalf<T>, message: Message) -> Result<()>
+where
+    T: AsyncWrite,
+{
     println!("send: {:?}", message);
-    stream.write_all(&message.serialize()).await.map_err(|e| e.into())
+    stream
+        .write_all(&message.serialize())
+        .await
+        .map_err(|e| e.into())
 }
 
 pub struct RecvHalf {

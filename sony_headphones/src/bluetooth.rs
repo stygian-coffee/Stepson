@@ -3,16 +3,16 @@ pub mod bluez;
 use std::fmt;
 use std::io;
 use std::io::{Read, Write};
-use std::os::unix::io::{RawFd, AsRawFd};
-use std::time::Duration;
+use std::os::unix::io::{AsRawFd, RawFd};
 use std::rc::Rc;
 use std::str::FromStr;
+use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 
 use dbus::arg::prop_cast;
-use dbus::blocking::Connection;
 use dbus::blocking::stdintf::org_freedesktop_dbus::{ObjectManager, Properties};
+use dbus::blocking::Connection;
 use dbus::strings::Path;
 
 use nix::sys::socket;
@@ -20,8 +20,8 @@ use nix::sys::socket;
 use futures::ready;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::io::unix::AsyncFd;
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 const BLUEZ_DEST: &str = "org.bluez";
 //const BLUEZ_ADAPTER: &str = "org.bluez.Adapter1";
@@ -45,7 +45,9 @@ impl Manager {
     pub fn get_devices(&self) -> Result<Vec<Device>> {
         let proxy = self.conn.with_proxy(BLUEZ_DEST, "/", DEFAULT_TIMEOUT);
 
-        let devices = proxy.get_managed_objects()?.into_iter()
+        let devices = proxy
+            .get_managed_objects()?
+            .into_iter()
             .filter(|(_k, v)| v.keys().any(|i| i.starts_with(BLUEZ_DEVICE)))
             .map(|(k, _v)| Device::from_dbus_path(self.conn.clone(), &k))
             .collect();
@@ -67,10 +69,12 @@ impl Device {
         let props = proxy.get_all(BLUEZ_DEVICE)?;
 
         let path = path.to_string();
-        let addr = prop_cast::<String>(&props, "Address").ok_or(
-            anyhow!("Unable to get MAC address for device"))?.clone();
-        let name = prop_cast::<String>(&props, "Name").ok_or(
-            anyhow!("Unable to get name for device {}", addr))?.clone();
+        let addr = prop_cast::<String>(&props, "Address")
+            .ok_or(anyhow!("Unable to get MAC address for device"))?
+            .clone();
+        let name = prop_cast::<String>(&props, "Name")
+            .ok_or(anyhow!("Unable to get name for device {}", addr))?
+            .clone();
 
         Ok(Self { path, addr, name })
     }
@@ -106,7 +110,7 @@ impl BtStream {
         let sock = bluez::socket(
             socket::SockType::Stream,
             bluez::BtProtocol::Rfcomm,
-            socket::SockFlag::empty()
+            socket::SockFlag::empty(),
         )?;
 
         let addr = bluez::BtAddr::new(FromStr::from_str(addr)?, 9);
@@ -117,8 +121,8 @@ impl BtStream {
     }
 
     pub fn shutdown(&self, how: socket::Shutdown) -> io::Result<()> {
-        socket::shutdown(self.sock, how)
-            .map_err(|e| e.as_errno().unwrap().into()) // e is always an Errno
+        socket::shutdown(self.sock, how).map_err(|e| e.as_errno().unwrap().into())
+        // e is always an Errno
     }
 }
 
@@ -168,9 +172,8 @@ impl AsyncRead for AsyncBtStream {
         let unpinned = self.get_mut();
 
         // Safety: the later code in this method does not de-initialize anything
-        let buf_inner = unsafe {
-            &mut *(buf.unfilled_mut() as *mut [std::mem::MaybeUninit<u8>] as *mut [u8])
-        };
+        let buf_inner =
+            unsafe { &mut *(buf.unfilled_mut() as *mut [std::mem::MaybeUninit<u8>] as *mut [u8]) };
 
         loop {
             let mut guard = ready!(unpinned.inner.poll_read_ready_mut(cx))?;
@@ -179,7 +182,7 @@ impl AsyncRead for AsyncBtStream {
                 Ok(n) => {
                     buf.advance(n?);
                     return Poll::Ready(Ok(()));
-                },
+                }
                 Err(_would_block) => continue,
             }
         }
@@ -204,17 +207,11 @@ impl AsyncWrite for AsyncBtStream {
         }
     }
 
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<io::Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<io::Result<()>> {
+    fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         self.inner.get_ref().shutdown(socket::Shutdown::Write)?;
         Poll::Ready(Ok(()))
     }

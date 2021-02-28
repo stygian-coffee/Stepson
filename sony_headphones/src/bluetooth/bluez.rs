@@ -1,11 +1,11 @@
-use std::os::unix::io::RawFd;
 use std::mem;
+use std::os::unix::io::RawFd;
 
 use libc;
 use macaddr::MacAddr6;
-use nix::Result;
-use nix::sys::socket;
 use nix::errno::Errno;
+use nix::sys::socket;
+use nix::Result;
 
 #[allow(non_camel_case_types)]
 type bdaddr_t = [u8; 6];
@@ -55,9 +55,7 @@ pub fn socket<T: Into<BtProtocol>>(
     let mut ty = ty as libc::c_int;
     ty |= flags.bits();
 
-    let res = unsafe {
-        libc::socket(domain, ty, protocol)
-    };
+    let res = unsafe { libc::socket(domain, ty, protocol) };
 
     Errno::result(res)
 }
@@ -75,7 +73,7 @@ pub fn connect(fd: RawFd, addr: &BtAddr) -> Result<()> {
     let res = unsafe {
         let (ptr, len) = (
             &*(&addr.0 as *const sockaddr_rc as *const libc::sockaddr),
-            mem::size_of_val(&addr) as libc::socklen_t
+            mem::size_of_val(&addr) as libc::socklen_t,
         );
         libc::connect(fd, ptr, len)
     };

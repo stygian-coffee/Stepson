@@ -17,7 +17,7 @@ pub enum DeserializeError {
     TryFromPrimitive(u8),
 }
 
-impl<T: TryFromPrimitive<Primitive=u8>> From<TryFromPrimitiveError<T>> for DeserializeError {
+impl<T: TryFromPrimitive<Primitive = u8>> From<TryFromPrimitiveError<T>> for DeserializeError {
     fn from(err: TryFromPrimitiveError<T>) -> Self {
         DeserializeError::TryFromPrimitive(err.number)
     }
@@ -26,5 +26,7 @@ impl<T: TryFromPrimitive<Primitive=u8>> From<TryFromPrimitiveError<T>> for Deser
 //TODO derive macro for simple structs
 pub trait Serializable {
     fn serialize(&self) -> Vec<u8>;
-    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> where Self: Sized;
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError>
+    where
+        Self: Sized;
 }

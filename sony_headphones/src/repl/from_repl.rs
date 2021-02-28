@@ -17,14 +17,17 @@ pub enum ParseError {
 }
 
 pub trait FromRepl {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError>
+    where
         Self: Sized,
-        T: Iterator<Item=&'a str>;
+        T: Iterator<Item = &'a str>;
 }
 
 impl FromRepl for u8 {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
-        T: Iterator<Item=&'a str> {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         let word = match words.next() {
             Some(w) => w,
             None => return Err(ParseError::ExpectedArgument),
@@ -34,8 +37,12 @@ impl FromRepl for u8 {
 }
 
 impl FromRepl for Vec<u8> {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
-        T: Iterator<Item=&'a str> {
-        Ok(words.map(|w| u8::from_str(w)).collect::<Result<Vec<u8>, _>>()?)
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError>
+    where
+        T: Iterator<Item = &'a str>,
+    {
+        Ok(words
+            .map(|w| u8::from_str(w))
+            .collect::<Result<Vec<u8>, _>>()?)
     }
 }

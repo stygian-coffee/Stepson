@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DataStruct, DataEnum, DeriveInput, Ident, Fields};
+use syn::{parse_macro_input, Data, DataEnum, DataStruct, DeriveInput, Fields, Ident};
 
 #[proc_macro_derive(FromRepl)]
 pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -36,7 +36,7 @@ fn from_repl_struct(data: DataStruct) -> TokenStream {
     match data.fields {
         Fields::Named(_fields) => {
             unimplemented!()
-        },
+        }
         Fields::Unnamed(fields) => {
             let mut lines = vec![];
             for f in fields.unnamed {
@@ -50,7 +50,7 @@ fn from_repl_struct(data: DataStruct) -> TokenStream {
                     #(#lines)*
                 ))
             }
-        },
+        }
         Fields::Unit => quote! {
             vec![].into_iter()
         },
@@ -89,7 +89,8 @@ fn from_repl_enum(data: DataEnum) -> TokenStream {
         let fields = match variant.fields {
             Fields::Unnamed(f) => f,
             _ => unimplemented!(),
-        }.unnamed;
+        }
+        .unnamed;
         let field = match fields.into_iter().nth(0) {
             Some(f) => f,
             None => unimplemented!(),
@@ -140,7 +141,7 @@ fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
     match data.fields {
         Fields::Named(_fields) => {
             unimplemented!()
-        },
+        }
         Fields::Unnamed(fields) => {
             let mut branches = vec![];
             for (i, f) in fields.unnamed.into_iter().enumerate() {
@@ -163,10 +164,10 @@ fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
                 }
                 m
             }
-        },
+        }
         Fields::Unit => quote! {
             std::collections::HashMap::new()
-        }
+        },
     }
 }
 
@@ -195,7 +196,8 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         let fields = match variant.fields {
             Fields::Unnamed(f) => f,
             _ => unimplemented!(),
-        }.unnamed;
+        }
+        .unnamed;
         let field = match fields.into_iter().nth(0) {
             Some(f) => f,
             None => unimplemented!(),

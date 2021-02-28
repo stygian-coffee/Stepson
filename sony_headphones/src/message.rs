@@ -4,9 +4,9 @@ pub mod data_mdr;
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use num_enum::{IntoPrimitive, FromPrimitive};
+use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::repl::{FromRepl, ReplCompletion, CompletionContext, ParseError};
+use crate::repl::{CompletionContext, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.DataType
@@ -69,8 +69,10 @@ impl Message {
 }
 
 impl FromRepl for Message {
-    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError> where
-        T: Iterator<Item=&'a str> {
+    fn from_repl<'a, T>(words: &mut T) -> Result<Self, ParseError>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         Ok(Self {
             sequence_number: 0,
             data: Data::from_repl(words)?,
@@ -79,9 +81,10 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_map(cx: &CompletionContext)
-        -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext)
-            -> (usize, Vec<String>)>> {
+    fn completion_map(
+        cx: &CompletionContext,
+    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
+    {
         Data::completion_map(cx)
     }
 }
@@ -100,7 +103,7 @@ impl Serializable for Message {
         let mut ret = vec![
             MESSAGE_START,
             self.data.data_type().into(),
-            self.sequence_number.into()
+            self.sequence_number.into(),
         ];
 
         // data length
@@ -127,18 +130,22 @@ impl Serializable for Message {
         let sequence_number = bytes[2];
         let data_len = u32::from_be_bytes(bytes[3..7].try_into().unwrap()); //TODO
         let data = match data_type {
-            DataType::Ack => Data::Ack(ack::Ack::deserialize(&bytes[7..(7+data_len as usize)])?),
-            DataType::DataMdr => Data::DataMdr(data_mdr::DataMdr::deserialize(&bytes[7..(7+data_len as usize)])?),
-            DataType::Unknown => Data::Unknown(bytes[7..(7+data_len as usize)].to_vec()),
+            DataType::Ack => Data::Ack(ack::Ack::deserialize(&bytes[7..(7 + data_len as usize)])?),
+            DataType::DataMdr => Data::DataMdr(data_mdr::DataMdr::deserialize(
+                &bytes[7..(7 + data_len as usize)],
+            )?),
+            DataType::Unknown => Data::Unknown(bytes[7..(7 + data_len as usize)].to_vec()),
         };
-        let chksum = bytes[(7+data_len as usize)];
+        let chksum = bytes[(7 + data_len as usize)];
 
-        if chksum != checksum(&bytes[1..(7+data_len as usize)]) {
+        if chksum != checksum(&bytes[1..(7 + data_len as usize)]) {
             return Err(DeserializeError::InvalidChecksum(chksum));
         }
 
-        if bytes[(7+data_len as usize)+1] != MESSAGE_END {
-            return Err(DeserializeError::InvalidEndOfMessage(bytes[(7+data_len as usize)+1]));
+        if bytes[(7 + data_len as usize) + 1] != MESSAGE_END {
+            return Err(DeserializeError::InvalidEndOfMessage(
+                bytes[(7 + data_len as usize) + 1],
+            ));
         }
 
         Ok(Self {
