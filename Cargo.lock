@@ -448,7 +448,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sony_headphones"
+name = "stepson"
 version = "0.1.0"
 dependencies = [
  "anyhow",
