@@ -6,7 +6,7 @@ use std::convert::TryInto;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::repl::{CompletionContext, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompleteMethod, CompletionContext, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.DataType
@@ -81,10 +81,7 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_map(
-        cx: &CompletionContext,
-    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
-    {
+    fn completion_map(cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
         Data::completion_map(cx)
     }
 }

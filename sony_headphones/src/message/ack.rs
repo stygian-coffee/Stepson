@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::repl::{CompletionContext, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompleteMethod, CompletionContext, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 #[derive(Debug)]
@@ -16,10 +16,7 @@ impl FromRepl for Ack {
 }
 
 impl ReplCompletion for Ack {
-    fn completion_map(
-        _cx: &CompletionContext,
-    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
-    {
+    fn completion_map(_cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
         HashMap::new()
     }
 }

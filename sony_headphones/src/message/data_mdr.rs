@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::repl::{CompletionContext, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompleteMethod, CompletionContext, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.Command
@@ -43,10 +43,7 @@ impl FromRepl for DataMdr {
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_map(
-        cx: &CompletionContext,
-    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
-    {
+    fn completion_map(cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
         Command::completion_map(cx)
     }
 }

@@ -14,10 +14,9 @@ pub struct CompletionContext {
     pub current_pos: usize,
 }
 
+pub type CompleteMethod = fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>);
 pub trait ReplCompletion {
-    fn completion_map(
-        cx: &CompletionContext,
-    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
+    fn completion_map(cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>>
     where
         Self: Sized;
 
@@ -69,10 +68,7 @@ pub trait ReplCompletion {
 }
 
 impl ReplCompletion for u8 {
-    fn completion_map(
-        _cx: &CompletionContext,
-    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
-    {
+    fn completion_map(_cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
         HashMap::new()
     }
 }

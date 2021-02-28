@@ -24,10 +24,7 @@ pub struct Repl {
 }
 
 impl ReplCompletion for Repl {
-    fn completion_map(
-        _cx: &CompletionContext,
-    ) -> HashMap<String, Option<fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>)>>
-    {
+    fn completion_map(_cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
         let mut m = HashMap::new();
         m.insert("connect".to_string(), None);
         m.insert("devices".to_string(), None);
