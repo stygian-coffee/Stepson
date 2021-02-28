@@ -1,7 +1,5 @@
 pub mod nc_asm;
 
-use std::collections::HashMap;
-
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use crate::repl::{CompleteMethod, CompletionContext, FromRepl, ParseError, ReplCompletion};
@@ -43,7 +41,7 @@ impl FromRepl for DataMdr {
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_map(cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
+    fn completion_map(cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
         Command::completion_map(cx)
     }
 }

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::convert::TryInto;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};

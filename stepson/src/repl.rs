@@ -4,8 +4,6 @@ pub mod from_repl;
 pub use completion::*;
 pub use from_repl::*;
 
-use std::collections::HashMap;
-
 use anyhow::Result;
 use rustyline::config::{CompletionType, Config};
 use rustyline::error::ReadlineError;
@@ -24,13 +22,13 @@ pub struct Repl {
 }
 
 impl ReplCompletion for Repl {
-    fn completion_map(_cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
-        let mut m = HashMap::new();
-        m.insert("connect".to_string(), None);
-        m.insert("devices".to_string(), None);
-        m.insert("send".to_string(), Some(Message::complete as _));
-        m.insert("quit".to_string(), None);
-        m
+    fn completion_map(_cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
+        vec![
+            ("connect".to_string(), None),
+            ("devices".to_string(), None),
+            ("send".to_string(), Some(Message::complete as _)),
+            ("quit".to_string(), None),
+        ]
     }
 }
 

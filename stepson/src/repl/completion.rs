@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use rustyline::completion::Completer;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
@@ -16,7 +14,7 @@ pub struct CompletionContext {
 
 pub type CompleteMethod = fn(Vec<String>, usize, CompletionContext) -> (usize, Vec<String>);
 pub trait ReplCompletion {
-    fn completion_map(cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>>
+    fn completion_map(cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)>
     where
         Self: Sized;
 
@@ -28,10 +26,7 @@ pub trait ReplCompletion {
     where
         Self: Sized,
     {
-        let completion_map: HashMap<String, _> = Self::completion_map(&cx)
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect();
+        let completion_map = Self::completion_map(&cx);
 
         let first_word = match words.pop() {
             Some(w) => w,
@@ -41,8 +36,9 @@ pub trait ReplCompletion {
         if !words.is_empty() {
             // if we are here, then we aren't at the last word in the line
             match completion_map
-                .get(&first_word)
-                .map(|opt| opt.as_ref())
+                .into_iter()
+                .find(|(k, _)| k == &first_word)
+                .map(|(_, v)| v)
                 .flatten()
             {
                 Some(f) => {
@@ -68,8 +64,8 @@ pub trait ReplCompletion {
 }
 
 impl ReplCompletion for u8 {
-    fn completion_map(_cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
-        HashMap::new()
+    fn completion_map(_cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
+        vec![]
     }
 }
 

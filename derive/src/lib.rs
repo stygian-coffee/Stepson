@@ -128,9 +128,9 @@ fn repl_completion(input: DeriveInput) -> TokenStream {
 
     quote! {
         impl ReplCompletion for #type_name {
-            fn completion_map(cx: &crate::repl::CompletionContext)
-                -> HashMap<String, Option<fn(Vec<String>, usize, crate::repl::CompletionContext)
-                    -> (usize, Vec<String>)>> {
+            fn completion_map(
+                cx: &crate::repl::CompletionContext,
+            ) -> Vec<(String, Option<crate::repl::CompleteMethod>)> {
                 #inner
             }
         }
@@ -148,25 +148,24 @@ fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
                 let ty = f.ty;
                 branches.push(quote! {
                     #i => {
-                        for word in #ty::completion_map(&cx).into_iter().map(|(k, _)| k) {
-                            m.insert(word, Some(Self::complete as _));
-                        }
-                    },
+                        #ty::completion_map(&cx)
+                            .into_iter()
+                            .map(|(k, _)| (k, Some(Self::complete as _)))
+                            .collect()
+                    }
                 });
             }
             quote! {
                 let ahead_by = cx.current_pos - cx.all_words.iter().rev()
                     .position(|s| s == stringify!(#type_name)).unwrap();
-                let mut m = std::collections::HashMap::new();
                 match ahead_by - 1 {
                     #(#branches)*
                     _ => unreachable!(),
                 }
-                m
             }
         }
         Fields::Unit => quote! {
-            std::collections::HashMap::new()
+            vec![]
         },
     }
 }
@@ -186,7 +185,7 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         // if discriminant, then no field
         if let Some(_) = variant.discriminant {
             lines.push(quote! {
-                m.insert(stringify!(#variant_name).to_string(), None);
+                (stringify!(#variant_name).to_string(), None),
             });
             continue;
         }
@@ -205,13 +204,13 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         let ty = field.ty;
 
         lines.push(quote! {
-            m.insert(stringify!(#variant_name).to_string(), Some(#ty::complete as _));
+            (stringify!(#variant_name).to_string(), Some(#ty::complete as _)),
         });
     }
 
     quote! {
-        let mut m = std::collections::HashMap::new();
-        #(#lines)*
-        m
+        vec![
+            #(#lines)*
+        ]
     }
 }

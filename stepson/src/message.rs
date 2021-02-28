@@ -1,7 +1,6 @@
 pub mod ack;
 pub mod data_mdr;
 
-use std::collections::HashMap;
 use std::convert::TryInto;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
@@ -81,7 +80,7 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_map(cx: &CompletionContext) -> HashMap<String, Option<CompleteMethod>> {
+    fn completion_map(cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
         Data::completion_map(cx)
     }
 }
