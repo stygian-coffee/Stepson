@@ -26,7 +26,7 @@ impl ReplCompletion for Repl {
         vec![
             ("connect".to_string(), None),
             ("devices".to_string(), None),
-            ("send".to_string(), Some(Message::complete as _)),
+            ("sendll".to_string(), Some(Message::complete as _)),
             ("quit".to_string(), None),
         ]
     }
