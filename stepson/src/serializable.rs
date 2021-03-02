@@ -1,14 +1,18 @@
-//use std::convert::From;
-
 use num_enum::{TryFromPrimitive, TryFromPrimitiveError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum DeserializeError {
+    #[error("escape byte plated at end of data")]
+    EscapeEof,
+    // #[error("expected escape character before {0}")]
+    // ExpectedEscape(u8),
     #[error("invalid checksum: {0}")]
     InvalidChecksum(u8),
     #[error("invalid length: {0}")]
     InvalidLength(u8),
+    #[error("invalid escape: {0}")]
+    InvalidEscape(u8),
     #[error("invalid start of message: {0}")]
     InvalidStartOfMessage(u8),
     #[error("invalid end of message: {0}")]

@@ -50,6 +50,7 @@ impl Data {
 
 pub const MESSAGE_START: u8 = 62;
 pub const MESSAGE_END: u8 = 60;
+pub const ESCAPE_CHAR: u8 = 61;
 
 /// com.sony.songpal.tandemfamily.message.b
 #[derive(Debug)]
@@ -87,13 +88,11 @@ impl ReplCompletion for Message {
 
 impl Serializable for Message {
     fn serialize(&self) -> Vec<u8> {
-        let mut data = match &self.data {
+        let mut data = escape_specials(&match &self.data {
             Data::Ack(x) => x.serialize(),
             Data::DataMdr(x) => x.serialize(),
             Data::Unknown(x) => x.clone(),
-        };
-
-        //TODO escape specials
+        });
 
         // message start, data type, sequence number
         let mut ret = vec![
@@ -118,6 +117,8 @@ impl Serializable for Message {
     }
 
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
+        let bytes = unescape_specials(bytes)?;
+
         if bytes[0] != MESSAGE_START {
             return Err(DeserializeError::InvalidStartOfMessage(bytes[0]));
         }
@@ -153,4 +154,46 @@ impl Serializable for Message {
 
 fn checksum(s: &[u8]) -> u8 {
     s.iter().sum()
+}
+
+fn escape_specials(s: &[u8]) -> Vec<u8> {
+    let mut new = Vec::new();
+    for b in s {
+        match b {
+            &MESSAGE_START | &MESSAGE_END | &ESCAPE_CHAR => {
+                new.push(ESCAPE_CHAR);
+            }
+            _ => {}
+        }
+        new.push(*b);
+    }
+    new
+}
+
+fn unescape_specials(s: &[u8]) -> Result<Vec<u8>, DeserializeError> {
+    let mut new = Vec::new();
+    let mut iter = s.iter();
+    loop {
+        let b = match iter.next() {
+            Some(b) => b,
+            None => break,
+        };
+        match b {
+            //&MESSAGE_START | &MESSAGE_END => return Err(DeserializeError::ExpectedEscape(*b)),
+            &ESCAPE_CHAR => {
+                let escaped = match iter.next() {
+                    Some(b) => b,
+                    None => return Err(DeserializeError::EscapeEof),
+                };
+                match escaped {
+                    &MESSAGE_START | &MESSAGE_END => {
+                        new.push(*escaped);
+                    }
+                    _ => return Err(DeserializeError::InvalidEscape(*escaped)),
+                }
+            }
+            _ => new.push(*b),
+        }
+    }
+    Ok(new)
 }
