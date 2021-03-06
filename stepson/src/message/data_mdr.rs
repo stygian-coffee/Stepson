@@ -1,5 +1,7 @@
 pub mod nc_asm;
 
+use std::rc::Rc;
+
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use crate::repl::{CompletionContext, CompletionTree, FromRepl, ParseError, ReplCompletion};
@@ -41,7 +43,7 @@ impl FromRepl for DataMdr {
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_tree(cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
+    fn completion_tree(cx: Rc<CompletionContext>) -> CompletionTree {
         Command::completion_tree(cx)
     }
 }

@@ -29,7 +29,7 @@ pub struct Repl {
 }
 
 impl ReplCompletionStateful for ReplData {
-    fn completion_tree(&self, cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
+    fn completion_tree(&self, cx: Rc<CompletionContext>) -> CompletionTree {
         CompletionTree::new(vec![
             ("connect".to_string(), CompletionTree::lazy_empty()),
             ("devices".to_string(), CompletionTree::lazy_empty()),

@@ -62,7 +62,7 @@ impl CompletionTree {
 }
 
 pub trait ReplCompletion {
-    fn completion_tree(cx: std::rc::Rc<CompletionContext>) -> CompletionTree;
+    fn completion_tree(cx: Rc<CompletionContext>) -> CompletionTree;
 
     fn lazy_completion_tree(cx: Rc<CompletionContext>) -> Box<dyn FnOnce() -> CompletionTree> {
         Box::new(|| Self::completion_tree(cx))
@@ -70,11 +70,11 @@ pub trait ReplCompletion {
 }
 
 pub trait ReplCompletionStateful {
-    fn completion_tree(&self, cx: std::rc::Rc<CompletionContext>) -> CompletionTree;
+    fn completion_tree(&self, cx: Rc<CompletionContext>) -> CompletionTree;
 }
 
 impl ReplCompletion for u8 {
-    fn completion_tree(_cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
+    fn completion_tree(_cx: Rc<CompletionContext>) -> CompletionTree {
         CompletionTree::empty()
     }
 }

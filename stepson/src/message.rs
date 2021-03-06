@@ -2,6 +2,7 @@ pub mod ack;
 pub mod data_mdr;
 
 use std::convert::TryInto;
+use std::rc::Rc;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 
@@ -81,7 +82,7 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_tree(cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
+    fn completion_tree(cx: Rc<CompletionContext>) -> CompletionTree {
         Data::completion_tree(cx)
     }
 }
