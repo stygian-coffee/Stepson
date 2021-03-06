@@ -18,19 +18,19 @@ pub struct CompletionContext {
 type CompletionBranch = (String, CompletionTree);
 
 pub struct CompletionTree {
-    branches: Vec<CompletionBranch>,
-    iter_index: usize, //TODO lame iterator
+    branches: Box<dyn Iterator<Item = CompletionBranch>>,
 }
 
 impl CompletionTree {
     pub fn new(branches: Vec<CompletionBranch>) -> Self {
-        Self { branches, iter_index: 0 }
+        Self {
+            branches: Box::new(branches.into_iter()),
+        }
     }
 
     pub fn empty() -> Self {
         Self {
-            branches: vec![],
-            iter_index: 0,
+            branches: Box::new(vec![].into_iter()),
         }
     }
 
@@ -43,13 +43,7 @@ impl Iterator for CompletionTree {
     type Item = CompletionBranch;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.iter_index == self.branches.len() {
-            None
-        } else {
-            self.iter_index += 1;
-            Some(std::mem::replace(&mut self.branches[self.iter_index - 1],
-                    (String::new(), CompletionTree::empty())))
-        }
+        self.branches.next()
     }
 }
 
