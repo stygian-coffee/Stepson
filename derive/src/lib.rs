@@ -128,9 +128,9 @@ fn repl_completion(input: DeriveInput) -> TokenStream {
 
     quote! {
         impl ReplCompletion for #type_name {
-            fn completion_map(
+            fn completion_tree(
                 cx: &crate::repl::CompletionContext,
-            ) -> Vec<(String, Option<crate::repl::CompleteMethod>)> {
+            ) -> crate::repl::CompletionTree {
                 #inner
             }
         }
@@ -147,12 +147,7 @@ fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
             for (i, f) in fields.unnamed.into_iter().enumerate() {
                 let ty = f.ty;
                 branches.push(quote! {
-                    #i => {
-                        #ty::completion_map(&cx)
-                            .into_iter()
-                            .map(|(k, _)| (k, Some(Self::complete as _)))
-                            .collect()
-                    }
+                    #i => #ty::completion_tree(cx),
                 });
             }
             quote! {
@@ -185,7 +180,7 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         // if discriminant, then no field
         if let Some(_) = variant.discriminant {
             lines.push(quote! {
-                (stringify!(#variant_name).to_string(), None),
+                (stringify!(#variant_name).to_string(), crate::repl::CompletionTree::empty()),
             });
             continue;
         }
@@ -204,13 +199,13 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         let ty = field.ty;
 
         lines.push(quote! {
-            (stringify!(#variant_name).to_string(), Some(#ty::complete as _)),
+            (stringify!(#variant_name).to_string(), <#ty as crate::repl::ReplCompletion>::completion_tree(cx)),
         });
     }
 
     quote! {
-        vec![
+        crate::repl::CompletionTree::new(vec![
             #(#lines)*
-        ]
+        ])
     }
 }

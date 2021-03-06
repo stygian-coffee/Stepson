@@ -1,4 +1,4 @@
-use crate::repl::{CompleteMethod, CompletionContext, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompletionContext, CompletionTree, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 #[derive(Debug)]
@@ -14,8 +14,8 @@ impl FromRepl for Ack {
 }
 
 impl ReplCompletion for Ack {
-    fn completion_map(_cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
-        vec![]
+    fn completion_tree(_cx: &CompletionContext) -> CompletionTree {
+        CompletionTree::empty()
     }
 }
 

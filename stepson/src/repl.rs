@@ -76,7 +76,8 @@ impl Repl {
     }
 
     fn prompt(&self) -> String {
-        match &self.device {
+        let data = self.data.borrow();
+        match &data.device {
             Some(dev) => format!("[{}]# ", dev.name),
             None => "[None]# ".to_string(),
         }
@@ -124,7 +125,7 @@ impl Repl {
             return Ok(false);
         }
 
-        let devices = self.manager.get_devices()?;
+        let devices = self.data.borrow().manager.get_devices()?;
         let device = match devices.into_iter().find(|dev| dev.addr == addr) {
             Some(dev) => dev,
             None => {
@@ -138,8 +139,8 @@ impl Repl {
 
         println!("connect: connected to {}", device.name);
 
-        self.device = Some(device);
-        self.message_queue = Some(message_queue);
+        self.data.borrow_mut().device = Some(device);
+        self.data.borrow_mut().message_queue = Some(message_queue);
 
         Ok(false)
     }
@@ -153,7 +154,7 @@ impl Repl {
             return Ok(false);
         }
 
-        let devices = self.manager.get_devices()?;
+        let devices = self.data.borrow().manager.get_devices()?;
 
         for dev in devices {
             println!("{}", dev);
@@ -166,7 +167,8 @@ impl Repl {
     where
         T: Iterator<Item = &'a str>,
     {
-        let message_queue = match &self.message_queue {
+        let data = self.data.borrow();
+        let message_queue = match &data.message_queue {
             Some(s) => s,
             None => {
                 println!("send: not connected to a device");

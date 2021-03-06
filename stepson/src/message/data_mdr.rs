@@ -2,7 +2,7 @@ pub mod nc_asm;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::repl::{CompleteMethod, CompletionContext, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompletionContext, CompletionTree, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.message.mdr.v1.table1.Command
@@ -41,8 +41,8 @@ impl FromRepl for DataMdr {
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_map(cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
-        Command::completion_map(cx)
+    fn completion_tree(cx: &CompletionContext) -> CompletionTree {
+        Command::completion_tree(cx)
     }
 }
 

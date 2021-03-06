@@ -47,7 +47,8 @@ impl Iterator for CompletionTree {
             None
         } else {
             self.iter_index += 1;
-            Some(self.branches[self.iter_index - 1])
+            Some(std::mem::replace(&mut self.branches[self.iter_index - 1],
+                    (String::new(), CompletionTree::empty())))
         }
     }
 }
@@ -60,14 +61,14 @@ pub trait ReplCompletionStateful {
     fn completion_tree(&self, cx: &CompletionContext) -> CompletionTree;
 }
 
-// impl ReplCompletion for u8 {
-//     fn completion_map(_cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
-//         vec![]
-//     }
-// }
+impl ReplCompletion for u8 {
+    fn completion_tree(_cx: &CompletionContext) -> CompletionTree {
+        CompletionTree::empty()
+    }
+}
 
 pub(super) struct ReplHelper {
-    data: Rc<RefCell<ReplData>>,
+    pub data: Rc<RefCell<ReplData>>,
 }
 
 impl Completer for ReplHelper {
@@ -77,7 +78,7 @@ impl Completer for ReplHelper {
         &self,
         line: &str,
         pos: usize,
-        ctx: &Context<'_>,
+        _ctx: &Context<'_>,
     ) -> Result<(usize, Vec<Self::Candidate>)> {
         // The words in the line in reverse order, starting with an empty "word" if the line
         // ends with whitespace.
@@ -99,7 +100,7 @@ impl Completer for ReplHelper {
             current_pos: 0,
         };
 
-        let mut completion_tree = self.data.borrow().completion_tree(&cx);
+        let completion_tree = self.data.borrow().completion_tree(&cx);
         let mut candidates = completion_tree.traverse(words);
         for s in &mut candidates {
             s.push(' ');
