@@ -107,6 +107,11 @@ impl Completer for ReplHelper {
                 .collect(),
         );
 
+        let last_word = match words.get(0) {
+            Some(w) => w.clone(),
+            None => String::new(),
+        };
+
         let cx = CompletionContext {
             all_words: words.clone(),
             current_pos: 0,
@@ -114,10 +119,11 @@ impl Completer for ReplHelper {
 
         let completion_tree = self.data.borrow().completion_tree(Rc::new(cx));
         let mut candidates = completion_tree.traverse(words);
+
         for s in &mut candidates {
             s.push(' ');
         }
-        Ok((pos, candidates))
+        Ok((pos - last_word.len(), candidates))
     }
 }
 
