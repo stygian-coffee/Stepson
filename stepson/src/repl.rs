@@ -4,6 +4,9 @@ pub mod from_repl;
 pub use completion::*;
 pub use from_repl::*;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use anyhow::Result;
 use rustyline::config::{CompletionType, Config};
 use rustyline::error::ReadlineError;
@@ -15,14 +18,18 @@ use crate::message_queue::MessageQueue;
 
 type ShouldExit = bool;
 
-pub struct Repl {
+struct ReplData {
     manager: Manager,
     device: Option<Device>,
     message_queue: Option<MessageQueue>,
 }
 
-impl ReplCompletion for Repl {
-    fn completion_map(_cx: &CompletionContext) -> Vec<(String, Option<CompleteMethod>)> {
+pub struct Repl {
+    data: Rc<RefCell<ReplData>>,
+}
+
+impl ReplCompletionStateful for ReplData {
+    fn completion_tree(&self, cx: &CompletionContext) -> CompletionTree {
         vec![
             ("connect".to_string(), None),
             ("devices".to_string(), None),
@@ -34,11 +41,12 @@ impl ReplCompletion for Repl {
 
 impl Repl {
     pub fn new() -> Result<Self> {
-        Ok(Self {
+        let data = Rc::new(RefCell::new(ReplData {
             manager: Manager::new()?,
             device: None,
             message_queue: None,
-        })
+        }));
+        Ok(Self { data })
     }
 
     pub async fn run(&mut self) -> Result<()> {
@@ -46,7 +54,7 @@ impl Repl {
             .completion_type(CompletionType::List)
             .build();
         let mut rl = Editor::<ReplHelper>::with_config(config);
-        rl.set_helper(Some(ReplHelper));
+        rl.set_helper(Some(ReplHelper { data: self.data.clone() }));
 
         loop {
             let readline = rl.readline(&self.prompt());
