@@ -18,36 +18,46 @@ pub struct CompletionContext {
 type CompletionBranch = (String, Box<dyn FnOnce() -> CompletionTree>);
 
 pub struct CompletionTree {
-    branches: Box<dyn Iterator<Item = CompletionBranch>>,
+    branches: Vec<CompletionBranch>,
 }
 
 impl CompletionTree {
     pub fn new(branches: Vec<CompletionBranch>) -> Self {
-        Self {
-            branches: Box::new(branches.into_iter()),
-        }
+        Self { branches }
     }
 
     pub fn empty() -> Self {
-        Self {
-            branches: Box::new(vec![].into_iter()),
-        }
+        Self { branches: vec![] }
     }
 
     pub fn lazy_empty() -> Box<fn() -> Self> {
         Box::new(|| Self::empty())
     }
 
-    fn traverse(&self, words: Vec<String>) -> Vec<String> {
-        unimplemented!()
-    }
-}
+    fn traverse(self, mut words: Vec<String>) -> Vec<String> {
+        let first_word = match words.pop() {
+            Some(w) => w,
+            None => return self.branches.into_iter().map(|(s, _)| s.clone()).collect(),
+        };
 
-impl Iterator for CompletionTree {
-    type Item = CompletionBranch;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.branches.next()
+        if words.is_empty() {
+            // if that was the last word
+            self.branches
+                .into_iter()
+                .filter_map(|(s, _)| {
+                    if s.starts_with(&first_word) {
+                        Some(s)
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        } else {
+            match self.branches.into_iter().find(|(s, _)| s == &first_word) {
+                Some((_, f)) => f().traverse(words),
+                None => vec![],
+            }
+        }
     }
 }
 

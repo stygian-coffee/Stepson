@@ -34,7 +34,6 @@ impl ReplCompletionStateful for ReplData {
             ("connect".to_string(), CompletionTree::lazy_empty()),
             ("devices".to_string(), CompletionTree::lazy_empty()),
             ("sendll".to_string(), Message::lazy_completion_tree(cx)),
-            ("sendll".to_string(), CompletionTree::lazy_empty()),
             ("quit".to_string(), CompletionTree::lazy_empty()),
         ])
     }
