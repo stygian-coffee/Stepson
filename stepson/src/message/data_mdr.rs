@@ -41,7 +41,7 @@ impl FromRepl for DataMdr {
 }
 
 impl ReplCompletion for DataMdr {
-    fn completion_tree(cx: &CompletionContext) -> CompletionTree {
+    fn completion_tree(cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
         Command::completion_tree(cx)
     }
 }

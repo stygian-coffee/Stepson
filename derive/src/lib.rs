@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DataEnum, DataStruct, DeriveInput, Fields, Ident};
 
 #[proc_macro_derive(FromRepl)]
@@ -129,7 +129,7 @@ fn repl_completion(input: DeriveInput) -> TokenStream {
     quote! {
         impl ReplCompletion for #type_name {
             fn completion_tree(
-                cx: &crate::repl::CompletionContext,
+                cx: std::rc::Rc<crate::repl::CompletionContext>,
             ) -> crate::repl::CompletionTree {
                 #inner
             }
@@ -168,6 +168,7 @@ fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
 fn repl_completion_enum(data: DataEnum) -> TokenStream {
     let variants = data.variants.into_iter();
 
+    let mut rcs = vec![];
     let mut lines = vec![];
     for variant in variants {
         let variant_name = variant.ident;
@@ -180,7 +181,7 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         // if discriminant, then no field
         if let Some(_) = variant.discriminant {
             lines.push(quote! {
-                (stringify!(#variant_name).to_string(), crate::repl::CompletionTree::empty()),
+                (stringify!(#variant_name).to_string(), crate::repl::CompletionTree::lazy_empty()),
             });
             continue;
         }
@@ -198,12 +199,20 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         };
         let ty = field.ty;
 
+        let cxi = format_ident!("cx{}", rcs.len());
+        rcs.push(quote! {
+            let #cxi = cx.clone();
+        });
         lines.push(quote! {
-            (stringify!(#variant_name).to_string(), <#ty as crate::repl::ReplCompletion>::completion_tree(cx)),
+            (
+                stringify!(#variant_name).to_string(),
+                <#ty as crate::repl::ReplCompletion>::lazy_completion_tree(#cxi)
+            ),
         });
     }
 
     quote! {
+        #(#rcs)*
         crate::repl::CompletionTree::new(vec![
             #(#lines)*
         ])

@@ -15,7 +15,7 @@ pub struct CompletionContext {
     pub current_pos: usize,
 }
 
-type CompletionBranch = (String, CompletionTree);
+type CompletionBranch = (String, Box<dyn FnOnce() -> CompletionTree>);
 
 pub struct CompletionTree {
     branches: Box<dyn Iterator<Item = CompletionBranch>>,
@@ -34,6 +34,10 @@ impl CompletionTree {
         }
     }
 
+    pub fn lazy_empty() -> Box<fn() -> Self> {
+        Box::new(|| Self::empty())
+    }
+
     fn traverse(&self, words: Vec<String>) -> Vec<String> {
         unimplemented!()
     }
@@ -48,15 +52,19 @@ impl Iterator for CompletionTree {
 }
 
 pub trait ReplCompletion {
-    fn completion_tree(cx: &CompletionContext) -> CompletionTree;
+    fn completion_tree(cx: std::rc::Rc<CompletionContext>) -> CompletionTree;
+
+    fn lazy_completion_tree(cx: Rc<CompletionContext>) -> Box<dyn FnOnce() -> CompletionTree> {
+        Box::new(|| Self::completion_tree(cx))
+    }
 }
 
 pub trait ReplCompletionStateful {
-    fn completion_tree(&self, cx: &CompletionContext) -> CompletionTree;
+    fn completion_tree(&self, cx: std::rc::Rc<CompletionContext>) -> CompletionTree;
 }
 
 impl ReplCompletion for u8 {
-    fn completion_tree(_cx: &CompletionContext) -> CompletionTree {
+    fn completion_tree(_cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
         CompletionTree::empty()
     }
 }
@@ -94,7 +102,7 @@ impl Completer for ReplHelper {
             current_pos: 0,
         };
 
-        let completion_tree = self.data.borrow().completion_tree(&cx);
+        let completion_tree = self.data.borrow().completion_tree(Rc::new(cx));
         let mut candidates = completion_tree.traverse(words);
         for s in &mut candidates {
             s.push(' ');

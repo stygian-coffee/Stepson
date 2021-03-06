@@ -14,7 +14,7 @@ impl FromRepl for Ack {
 }
 
 impl ReplCompletion for Ack {
-    fn completion_tree(_cx: &CompletionContext) -> CompletionTree {
+    fn completion_tree(_cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
         CompletionTree::empty()
     }
 }

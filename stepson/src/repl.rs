@@ -29,13 +29,13 @@ pub struct Repl {
 }
 
 impl ReplCompletionStateful for ReplData {
-    fn completion_tree(&self, cx: &CompletionContext) -> CompletionTree {
+    fn completion_tree(&self, cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
         CompletionTree::new(vec![
-            ("connect".to_string(), CompletionTree::empty()),
-            ("devices".to_string(), CompletionTree::empty()),
-            ("sendll".to_string(), Message::completion_tree(cx)),
-            ("sendll".to_string(), CompletionTree::empty()),
-            ("quit".to_string(), CompletionTree::empty()),
+            ("connect".to_string(), CompletionTree::lazy_empty()),
+            ("devices".to_string(), CompletionTree::lazy_empty()),
+            ("sendll".to_string(), Message::lazy_completion_tree(cx)),
+            ("sendll".to_string(), CompletionTree::lazy_empty()),
+            ("quit".to_string(), CompletionTree::lazy_empty()),
         ])
     }
 }
@@ -55,7 +55,9 @@ impl Repl {
             .completion_type(CompletionType::List)
             .build();
         let mut rl = Editor::<ReplHelper>::with_config(config);
-        rl.set_helper(Some(ReplHelper { data: self.data.clone() }));
+        rl.set_helper(Some(ReplHelper {
+            data: self.data.clone(),
+        }));
 
         loop {
             let readline = rl.readline(&self.prompt());

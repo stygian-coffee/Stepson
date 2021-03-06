@@ -81,7 +81,7 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_tree(cx: &CompletionContext) -> CompletionTree {
+    fn completion_tree(cx: std::rc::Rc<CompletionContext>) -> CompletionTree {
         Data::completion_tree(cx)
     }
 }
