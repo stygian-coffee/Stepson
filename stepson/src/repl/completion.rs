@@ -15,11 +15,40 @@ pub struct CompletionContext {
     pub current_pos: usize,
 }
 
-pub struct CompletionTree { }
+type CompletionBranch = (String, CompletionTree);
+
+pub struct CompletionTree {
+    branches: Vec<CompletionBranch>,
+    iter_index: usize, //TODO lame iterator
+}
 
 impl CompletionTree {
+    pub fn new(branches: Vec<CompletionBranch>) -> Self {
+        Self { branches, iter_index: 0 }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            branches: vec![],
+            iter_index: 0,
+        }
+    }
+
     fn traverse(&self, words: Vec<String>) -> Vec<String> {
         unimplemented!()
+    }
+}
+
+impl Iterator for CompletionTree {
+    type Item = CompletionBranch;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.iter_index == self.branches.len() {
+            None
+        } else {
+            self.iter_index += 1;
+            Some(self.branches[self.iter_index - 1])
+        }
     }
 }
 

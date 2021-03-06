@@ -30,12 +30,13 @@ pub struct Repl {
 
 impl ReplCompletionStateful for ReplData {
     fn completion_tree(&self, cx: &CompletionContext) -> CompletionTree {
-        vec![
-            ("connect".to_string(), None),
-            ("devices".to_string(), None),
-            ("sendll".to_string(), Some(Message::complete as _)),
-            ("quit".to_string(), None),
-        ]
+        CompletionTree::new(vec![
+            ("connect".to_string(), CompletionTree::empty()),
+            ("devices".to_string(), CompletionTree::empty()),
+            ("sendll".to_string(), Message::completion_tree(cx)),
+            ("sendll".to_string(), CompletionTree::empty()),
+            ("quit".to_string(), CompletionTree::empty()),
+        ])
     }
 }
 
