@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, Data, DataEnum, DataStruct, DeriveInput, Fields, Ident};
+use syn::{parse_macro_input, Data, DataEnum, DataStruct, DeriveInput, Fields};
 
 #[proc_macro_derive(FromRepl)]
 pub fn derive_from_repl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -121,46 +121,64 @@ fn repl_completion(input: DeriveInput) -> TokenStream {
     let type_name = input.ident;
 
     let inner = match input.data {
-        Data::Struct(data) => repl_completion_struct(&type_name, data),
+        Data::Struct(data) => repl_completion_struct(data),
         Data::Enum(data) => repl_completion_enum(data),
         Data::Union(_) => unimplemented!(),
     };
 
     quote! {
         impl ReplCompletion for #type_name {
-            fn completion_tree(
-                cx: std::rc::Rc<crate::repl::CompletionContext>,
-            ) -> crate::repl::CompletionTree {
+            fn completion_tree() -> crate::repl::CompletionTree {
                 #inner
             }
         }
     }
 }
 
-fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
+fn repl_completion_struct(data: DataStruct) -> TokenStream {
     match data.fields {
         Fields::Named(_fields) => {
             unimplemented!()
         }
         Fields::Unnamed(fields) => {
-            let mut branches = vec![];
+            let mut sub_tree_fns = vec![];
+
+            let num_fields = fields.unnamed.len();
             for (i, f) in fields.unnamed.into_iter().enumerate() {
-                let ty = f.ty;
-                branches.push(quote! {
-                    #i => #ty::completion_tree(cx),
+                let field_type = f.ty;
+                let current_sub_tree_fn = format_ident!("sub_tree_{}", i);
+                let next_sub_tree_fn = if i == num_fields - 1 {
+                    quote! {
+                        crate::repl::CompletionTree::lazy_empty()
+                    }
+                } else {
+                    let next_ident = format_ident!("sub_tree_{}", i + 1);
+                    quote! {
+                        Box::new(#next_ident)
+                    }
+                };
+
+                sub_tree_fns.push(quote! {
+                    fn #current_sub_tree_fn() -> crate::repl::CompletionTree {
+                        use crate::repl::CompletionTree;
+                        CompletionTree {
+                            branches: #field_type::lazy_completion_tree()()
+                                .branches
+                                .into_iter()
+                                .map(|(s, _)| (s, Box::new(#next_sub_tree_fn) as _))
+                                .collect(),
+                        }
+                    }
                 });
             }
+
             quote! {
-                let ahead_by = cx.current_pos - cx.all_words.iter().rev()
-                    .position(|s| s == stringify!(#type_name)).unwrap();
-                match ahead_by - 1 {
-                    #(#branches)*
-                    _ => unreachable!(),
-                }
+                #(#sub_tree_fns)*
+                sub_tree_0()
             }
         }
         Fields::Unit => quote! {
-            vec![]
+            crate::repl::CompletionTree::lazy_empty()
         },
     }
 }
@@ -168,7 +186,6 @@ fn repl_completion_struct(type_name: &Ident, data: DataStruct) -> TokenStream {
 fn repl_completion_enum(data: DataEnum) -> TokenStream {
     let variants = data.variants.into_iter();
 
-    let mut rcs = vec![];
     let mut lines = vec![];
     for variant in variants {
         let variant_name = variant.ident;
@@ -199,20 +216,15 @@ fn repl_completion_enum(data: DataEnum) -> TokenStream {
         };
         let ty = field.ty;
 
-        let cxi = format_ident!("cx{}", rcs.len());
-        rcs.push(quote! {
-            let #cxi = cx.clone();
-        });
         lines.push(quote! {
             (
                 stringify!(#variant_name).to_string(),
-                <#ty as crate::repl::ReplCompletion>::lazy_completion_tree(#cxi)
+                <#ty as crate::repl::ReplCompletion>::lazy_completion_tree()
             ),
         });
     }
 
     quote! {
-        #(#rcs)*
         crate::repl::CompletionTree::new(vec![
             #(#lines)*
         ])

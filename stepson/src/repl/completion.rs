@@ -9,16 +9,10 @@ use rustyline::{Context, Helper, Result};
 
 use super::ReplData;
 
-#[derive(Debug)]
-pub struct CompletionContext {
-    pub all_words: Vec<String>,
-    pub current_pos: usize,
-}
-
-type CompletionBranch = (String, Box<dyn FnOnce() -> CompletionTree>);
+type CompletionBranch = (String, Box<dyn Fn() -> CompletionTree>);
 
 pub struct CompletionTree {
-    branches: Vec<CompletionBranch>,
+    pub branches: Vec<CompletionBranch>,
 }
 
 impl CompletionTree {
@@ -62,19 +56,19 @@ impl CompletionTree {
 }
 
 pub trait ReplCompletion {
-    fn completion_tree(cx: Rc<CompletionContext>) -> CompletionTree;
+    fn completion_tree() -> CompletionTree;
 
-    fn lazy_completion_tree(cx: Rc<CompletionContext>) -> Box<dyn FnOnce() -> CompletionTree> {
-        Box::new(|| Self::completion_tree(cx))
+    fn lazy_completion_tree() -> Box<dyn Fn() -> CompletionTree> {
+        Box::new(|| Self::completion_tree())
     }
 }
 
 pub trait ReplCompletionStateful {
-    fn completion_tree(&self, cx: Rc<CompletionContext>) -> CompletionTree;
+    fn completion_tree(&self) -> CompletionTree;
 }
 
 impl ReplCompletion for u8 {
-    fn completion_tree(_cx: Rc<CompletionContext>) -> CompletionTree {
+    fn completion_tree() -> CompletionTree {
         CompletionTree::empty()
     }
 }
@@ -112,12 +106,7 @@ impl Completer for ReplHelper {
             None => String::new(),
         };
 
-        let cx = CompletionContext {
-            all_words: words.clone(),
-            current_pos: 0,
-        };
-
-        let completion_tree = self.data.borrow().completion_tree(Rc::new(cx));
+        let completion_tree = self.data.borrow().completion_tree();
         let mut candidates = completion_tree.traverse(words);
 
         for s in &mut candidates {

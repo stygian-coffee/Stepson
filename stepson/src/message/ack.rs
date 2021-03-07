@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use crate::repl::{CompletionContext, CompletionTree, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompletionTree, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 #[derive(Debug)]
@@ -16,7 +14,7 @@ impl FromRepl for Ack {
 }
 
 impl ReplCompletion for Ack {
-    fn completion_tree(_cx: Rc<CompletionContext>) -> CompletionTree {
+    fn completion_tree() -> CompletionTree {
         CompletionTree::empty()
     }
 }

@@ -2,11 +2,10 @@ pub mod ack;
 pub mod data_mdr;
 
 use std::convert::TryInto;
-use std::rc::Rc;
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-use crate::repl::{CompletionContext, CompletionTree, FromRepl, ParseError, ReplCompletion};
+use crate::repl::{CompletionTree, FromRepl, ParseError, ReplCompletion};
 use crate::serializable::{DeserializeError, Serializable};
 
 /// com.sony.songpal.tandemfamily.DataType
@@ -82,8 +81,8 @@ impl FromRepl for Message {
 }
 
 impl ReplCompletion for Message {
-    fn completion_tree(cx: Rc<CompletionContext>) -> CompletionTree {
-        Data::completion_tree(cx)
+    fn completion_tree() -> CompletionTree {
+        Data::completion_tree()
     }
 }
 
