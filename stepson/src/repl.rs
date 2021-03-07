@@ -91,7 +91,7 @@ impl Repl {
             None => Ok(false),
             Some("connect") => self.connect(&mut words).await,
             Some("devices") => self.devices(&mut words).await,
-            Some("send") => self.send(&mut words).await,
+            Some("sendll") => self.send(&mut words).await,
             Some("quit") => self.quit(&mut words).await,
             Some(w) => self.unknown_command(w),
         };
