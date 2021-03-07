@@ -9,7 +9,7 @@ use rustyline::{Context, Helper, Result};
 
 use super::ReplData;
 
-type CompletionBranch = (String, Box<dyn Fn() -> CompletionTree>);
+type CompletionBranch = (String, Box<dyn FnOnce() -> CompletionTree>);
 
 pub struct CompletionTree {
     pub branches: Vec<CompletionBranch>,
@@ -58,13 +58,13 @@ impl CompletionTree {
 pub trait ReplCompletion {
     fn completion_tree() -> CompletionTree;
 
-    fn lazy_completion_tree() -> Box<dyn Fn() -> CompletionTree> {
+    fn lazy_completion_tree() -> Box<dyn FnOnce() -> CompletionTree> {
         Box::new(|| Self::completion_tree())
     }
 }
 
 pub trait ReplCompletionStateful {
-    fn completion_tree(&self) -> CompletionTree;
+    fn lazy_completion_tree(&self) -> Box<dyn FnOnce() -> CompletionTree>;
 }
 
 impl ReplCompletion for u8 {
@@ -106,7 +106,7 @@ impl Completer for ReplHelper {
             None => String::new(),
         };
 
-        let completion_tree = self.data.borrow().completion_tree();
+        let completion_tree = self.data.borrow().lazy_completion_tree()();
         let mut candidates = completion_tree.traverse(words);
 
         for s in &mut candidates {

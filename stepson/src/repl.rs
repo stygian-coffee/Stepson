@@ -19,7 +19,7 @@ use crate::message_queue::MessageQueue;
 type ShouldExit = bool;
 
 struct ReplData {
-    manager: Manager,
+    manager: Rc<Manager>,
     device: Option<Device>,
     message_queue: Option<MessageQueue>,
 }
@@ -29,20 +29,21 @@ pub struct Repl {
 }
 
 impl ReplCompletionStateful for ReplData {
-    fn completion_tree(&self) -> CompletionTree {
-        CompletionTree::new(vec![
-            ("connect".to_string(), CompletionTree::lazy_empty()),
+    fn lazy_completion_tree(&self) -> Box<dyn FnOnce() -> CompletionTree> {
+        let manager = self.manager.clone();
+        Box::new(move || CompletionTree::new(vec![
+            ("connect".to_string(), manager.lazy_completion_tree()),
             ("devices".to_string(), CompletionTree::lazy_empty()),
             ("sendll".to_string(), Message::lazy_completion_tree()),
             ("quit".to_string(), CompletionTree::lazy_empty()),
-        ])
+        ]))
     }
 }
 
 impl Repl {
     pub fn new() -> Result<Self> {
         let data = Rc::new(RefCell::new(ReplData {
-            manager: Manager::new()?,
+            manager: Rc::new(Manager::new()?),
             device: None,
             message_queue: None,
         }));

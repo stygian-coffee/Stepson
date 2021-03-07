@@ -23,6 +23,8 @@ use std::task::{Context, Poll};
 use tokio::io::unix::AsyncFd;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
+use crate::repl::{CompletionTree, ReplCompletionStateful};
+
 const BLUEZ_DEST: &str = "org.bluez";
 //const BLUEZ_ADAPTER: &str = "org.bluez.Adapter1";
 const BLUEZ_DEVICE: &str = "org.bluez.Device1";
@@ -43,16 +45,38 @@ impl Manager {
     }
 
     pub fn get_devices(&self) -> Result<Vec<Device>> {
-        let proxy = self.conn.with_proxy(BLUEZ_DEST, "/", DEFAULT_TIMEOUT);
+        Self::get_devices_priv(self.conn.clone())
+    }
+
+    fn get_devices_priv(conn: Rc<Connection>) -> Result<Vec<Device>> {
+        let proxy = conn.with_proxy(BLUEZ_DEST, "/", DEFAULT_TIMEOUT);
 
         let devices = proxy
             .get_managed_objects()?
             .into_iter()
             .filter(|(_k, v)| v.keys().any(|i| i.starts_with(BLUEZ_DEVICE)))
-            .map(|(k, _v)| Device::from_dbus_path(self.conn.clone(), &k))
+            .map(|(k, _v)| Device::from_dbus_path(conn.clone(), &k))
             .collect();
 
         devices
+    }
+}
+
+impl ReplCompletionStateful for Manager {
+    fn lazy_completion_tree(&self) -> Box<dyn FnOnce() -> CompletionTree> {
+        let conn = self.conn.clone();
+        Box::new(|| {
+            let devices = match Self::get_devices_priv(conn) {
+                Ok(d) => d,
+                Err(_) => vec![],
+            };
+            CompletionTree::new(
+                devices
+                    .into_iter()
+                    .map(|d| (d.addr, CompletionTree::lazy_empty() as _))
+                    .collect(),
+            )
+        })
     }
 }
 
